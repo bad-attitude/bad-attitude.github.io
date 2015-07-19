@@ -75,6 +75,7 @@ function defaultDisplay(obj) {
 
 // Sounds we can play
 var airhorn = new Horn("./sound/airhorn.mp3");
+var crickets = new Horn("./sound/crickets.mp3");
 
 // The keys in this dictionary are used as IRC-style commands.
 // If a message starts with "/key", then commands["key"] will
@@ -102,9 +103,21 @@ var commands = {
     var command = obj.message.replace(/^\/airhorn[ ]+/, "");
     console.log(command)
     switch (command) {
-      case "start": airhorn.start(true); break;
+      case "start": airhorn.start(true, 0.24, 0.34); break;
       case "stop": airhorn.stop(); break;
       default: airhorn.start(false); break;
+    }
+    return defaultDisplay(obj);
+  },
+
+  // Play a cricket sound
+  "crickets": function(obj) {
+    var command = obj.message.replace(/^\/crickets[ ]+/, "");
+    console.log(command)
+    switch (command) {
+      case "start": crickets.start(true, 0.10, 1.75); break;
+      case "stop": crickets.stop(); break;
+      default: crickets.start(false); break;
     }
     return defaultDisplay(obj);
   },
