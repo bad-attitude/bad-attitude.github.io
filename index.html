@@ -56,15 +56,10 @@ input {
 <a href="https://github.com/bad-attitude/bad-attitude.github.io/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/121cd7cbdc3e4855075ea8b558508b91ac463ac2/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f677265656e5f3030373230302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_green_007200.png"></a>
 
 <h1>bad-attitude</h1>
-
 <div id="container">
-
 <input id="nick" placeholder="your-nick-here" /><br/>
-
 <div id="box"></div>
-
 <input id="message" placeholder="your-chat-here" /><br/>
-
 </div>
 
 
@@ -81,6 +76,13 @@ var channel = 'bad-attitude';
 function clean(text) {
   return (''+text).trim().replace( /[<>]/g, '' );
 }
+
+function defaultDisplay(obj) {
+  return '<b>' + obj.nick + '</b>: ' + obj.message;
+}
+
+// Sounds we can play
+var airhorn = new Horn("./sound/airhorn.mp3");
 
 // The keys in this dictionary are used as IRC-style commands.
 // If a message starts with "/key", then commands["key"] will
@@ -102,6 +104,18 @@ var commands = {
   reload: function(obj) {
     window.location.reload();
   },
+
+  // Play an airhorn sound
+  airhorn: function(obj) {
+    var command = obj.message.replace(/^\/airhorn[ ]+/, "");
+    console.log(command)
+    switch (command) {
+      case "start": airhorn.start(true); break;
+      case "stop": airhorn.stop(); break;
+      default: airhorn.start(false); break;
+    }
+    return defaultDisplay(obj);
+  },
 };
 
 // Same as commands, but applied to outbound commands.
@@ -115,6 +129,12 @@ var localCommands = {
     return null;
   }
 };
+
+(function(){
+var box = PUBNUB.$('box');
+var nick = PUBNUB.$('nick');
+var message = PUBNUB.$('message');
+var channel = 'bad-attitude';
 
 // Sync in from localStorage
 if (localStorage.nick && localStorage.nick.length > 0) {
@@ -144,7 +164,7 @@ PUBNUB.subscribe({
 
         // By default, "nick: message"
         if (display == "") {
-          display = '<b>' + obj.nick + '</b>: ' + obj.message;
+          display = defaultDisplay(obj);
         }
 
         box.innerHTML = box.innerHTML + '<br/>' + display;
