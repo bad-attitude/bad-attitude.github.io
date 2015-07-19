@@ -132,6 +132,14 @@ var Horn = function(path) {
   init();
 };
 
+// Sync in from localStorage
+if (localStorage.nick && localStorage.nick.length > 0) {
+  nick.value = localStorage.nick;
+}
+if (localStorage.history && localStorage.history.length > 0) {
+  box.innerHTML = localStorage.history;
+  box.scrollTop = box.scrollHeight - 10;
+}
 
 // Sounds we can play
 var airhorn = new Horn("./sound/airhorn.mp3");
@@ -192,21 +200,6 @@ var localCommands = {
     return null;
   }
 };
-
-(function(){
-var box = PUBNUB.$('box');
-var nick = PUBNUB.$('nick');
-var message = PUBNUB.$('message');
-var channel = 'bad-attitude';
-
-// Sync in from localStorage
-if (localStorage.nick && localStorage.nick.length > 0) {
-  nick.value = localStorage.nick;
-}
-if (localStorage.history && localStorage.history.length > 0) {
-  box.innerHTML = localStorage.history;
-  box.scrollTop = box.scrollHeight - 10;
-}
 
 PUBNUB.subscribe({
     channel: channel,
