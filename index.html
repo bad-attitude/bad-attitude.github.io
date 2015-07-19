@@ -7,13 +7,13 @@
 body {
   font-size: 12pt;
   font-family: Monaco, monospace;
-  color: #0F2;
   background-color: #111;
 }
 
 h1 {
   font-size: 12pt;
   text-align: center;
+  color: #0F2;
 }
 
 #container {
@@ -32,11 +32,12 @@ input {
 }
 
 #box {
-  width: 98%;
+  width: 95%;
   height:10em;
   overflow:scroll;
   border: 1px solid black;
   background-color: #eee;
+  padding: 1ex;
 }
 
 </style>
@@ -126,6 +127,8 @@ PUBNUB.subscribe({
         console.log("exception: "+ e);
         box.innerHTML = box.innerHTML + '<br/>Bad message';
       }
+
+      box.scrollTop = box.scrollHeight - 10;
     }
 });
 PUBNUB.bind( 'keyup', message, function(e) {
@@ -137,7 +140,6 @@ PUBNUB.bind( 'keyup', message, function(e) {
         }),
         x: (function() {
           message.value = '';
-          box.scrollTop = box.scrollHeight + 10;
         })()
     })
 } )
