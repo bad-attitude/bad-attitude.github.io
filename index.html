@@ -170,7 +170,7 @@ var commands = {
   },
 
   // Play a cricket sound
-  "crickets": function(obj) {
+  crickets: function(obj) {
     var command = obj.message.replace(/^\/crickets[ ]+/, "");
     switch (command) {
       case "start": crickets.start(true, 0.10, 1.75); break;
