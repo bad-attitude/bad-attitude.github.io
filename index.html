@@ -149,7 +149,8 @@ var crickets = new Horn("./sound/crickets.mp3");
 // If a message starts with "/key", then commands["key"] will
 // be run.
 //  Input:  The object received from pubnub
-//  Output: The html to be added to the chat window
+//  Output: A string containing the HTML to render to the chat window,
+//     a non-string if you want the default rendering.
 //
 // WARNING: Do not send messages from these callbacks, due to
 // the risk of cascades.
@@ -164,6 +165,7 @@ var commands = {
   // to load new code.
   reload: function(obj) {
     window.location.reload();
+    return ""; // squelch output
   },
 
   // Play an airhorn sound
@@ -174,7 +176,6 @@ var commands = {
       case "stop": airhorn.stop(); break;
       default: airhorn.start(false); break;
     }
-    return defaultDisplay(obj);
   },
 
   // Play a cricket sound
@@ -185,19 +186,17 @@ var commands = {
       case "stop": crickets.stop(); break;
       default: crickets.start(false); break;
     }
-    return defaultDisplay(obj);
   },
 };
 
 // Same as commands, but applied to outbound commands.
 //   Input:  The object about to be sent
-//   Output: The object to be sent, or something false if no
+//   Output: The object to be sent, or something falsy if no
 //           object should be sent
 var localCommands = {
   flush: function() {
     delete localStorage.history;
     box.innerHTML = "";
-    return null;
   }
 };
 
@@ -219,7 +218,7 @@ PUBNUB.subscribe({
         }
 
         // By default, "nick: message"
-        if (display == "") {
+        if (typeof display !== "string") {
           display = defaultDisplay(obj);
         }
 
