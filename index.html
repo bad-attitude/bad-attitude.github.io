@@ -2,7 +2,6 @@
 
 <head>
 <title>bad-attitude</title>
-<meta http-equiv="refresh" content="0; url=https://bad-attitude.github.io/">
 <style>
 
 body {
@@ -41,6 +40,14 @@ input {
 }
 
 </style>
+<script>
+// Redirect to HTTPS if we need to
+(function() {
+  if (window.location.href.match("http:")) {
+    window.location.href = window.location.href.replace("http:", "https:");
+  }
+})();
+</script>
 </head>
 
 <body>
