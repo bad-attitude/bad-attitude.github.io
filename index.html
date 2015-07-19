@@ -17,7 +17,8 @@ h1 {
 }
 
 #container {
-  width: 40em;
+  max-width: 800px;
+  width: 80%;
   margin-left: auto;
   margin-right: auto;
   padding: 1ex;
@@ -101,7 +102,7 @@ var commands = {
 //           object should be sent
 var localCommands = {
   "flush": function() {
-    delete localStorage["history"]
+    delete localStorage.history.
     box.innerHTML = "";
     return null;
   }
@@ -115,11 +116,11 @@ var message = PUBNUB.$('message');
 var channel = 'bad-attitude';
 
 // Sync in from localStorage
-if (localStorage["nick"] && localStorage["nick"].length > 0) {
-  nick.value = localStorage["nick"];
+if (localStorage.nick && localStorage.nick.length > 0) {
+  nick.value = localStorage.nick;
 }
-if (localStorage["history"] && localStorage["history"].length > 0) {
-  box.innerHTML = localStorage["history"];
+if (localStorage.history && localStorage.history.length > 0) {
+  box.innerHTML = localStorage.history;
 }
 
 PUBNUB.subscribe({
@@ -151,15 +152,15 @@ PUBNUB.subscribe({
         box.innerHTML = box.innerHTML + '<br/>Bad message';
       }
 
-      localStorage["history"] = box.innerHTML
+      localStorage.history = box.innerHTML;
 
       box.scrollTop = box.scrollHeight - 10;
     }
 });
 
-// Sync nick to localStorage["nick"]
+// Sync nick to localStorage
 PUBNUB.bind('change', nick, function(e) {
-  localStorage["nick"] = nick.value;
+  localStorage.nick = nick.value;
 });
 
 // Send messages when "enter" is pressed
