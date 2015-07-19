@@ -132,17 +132,25 @@ PUBNUB.subscribe({
     }
 });
 PUBNUB.bind( 'keyup', message, function(e) {
-    (e.keyCode || e.charCode) === 13 && PUBNUB.publish({
-        channel: channel,
-        message: JSON.stringify({
-          nick: nick.value,
-          message: message.value
-        }),
-        x: (function() {
-          message.value = '';
-        })()
+  if ((e.keyCode || e.charCode) === 13) {
+    if (nick.value == "") {
+      window.alert("Put in a nick, yo!");
+      nick.focus();
+      return;
+    }
+
+    PUBNUB.publish({
+      channel: channel,
+      message: JSON.stringify({
+        nick: nick.value,
+        message: message.value
+      }),
+      x: (function() {
+        message.value = '';
+      })()
     })
-} )
+  }
+})
 })()
 
 </script>
