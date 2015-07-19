@@ -70,7 +70,7 @@ input {
 <script>
 
 function clean(text) {
-  return (''+text).replace( /[<>]/g, '' );
+  return (''+text).trim().replace( /[<>]/g, '' );
 }
 
 // The keys in this dictionary are used as IRC-style commands.
@@ -123,8 +123,8 @@ if (localStorage["history"] && localStorage["history"].length > 0) {
 }
 
 PUBNUB.subscribe({
-    channel  : channel,
-    callback : function(text) {
+    channel: channel,
+    callback: function(text) {
       try {
         var obj = JSON.parse(text);
         obj.nick = clean(obj.nick);
@@ -159,45 +159,48 @@ PUBNUB.subscribe({
 
 // Sync nick to localStorage["nick"]
 PUBNUB.bind('change', nick, function(e) {
-  localStorage["nick"] = nick.value;
+  if (nick.value !== '') {
+    nick.style.backgroundColor = '#fff';
+    localStorage["nick"] = nick.value;
+  }
 });
 
-// Send messages when "enter" is pressed
 PUBNUB.bind('keyup', message, function(e) {
-  if ((e.keyCode || e.charCode) === 13) {
-    if (nick.value == "") {
-      window.alert("Put in a nick, yo!");
-      nick.focus();
-      return;
-    }
-
-    var obj = {
-      nick: nick.value,
-      message: message.value
-    };
-    console.log("sending: "+ JSON.stringify(obj));
-    for (cmd in localCommands) {
-      if (message.value.match("^/"+cmd)) {
-        obj = localCommands[cmd](obj);
-        break;
-      }
-    }
-
-    if (!obj) {
-      return;
-    }
-
-    console.log("sending: "+ JSON.stringify(obj));
-    PUBNUB.publish({
-      channel: channel,
-      message: JSON.stringify(obj),
-      x: (message.value = '')
-    })
-
-
+  if ((e.keyCode || e.charCode) !== 13) {
+    return;
   }
-})
-})()
+  if (nick.value === '') {
+    nick.style.backgroundColor = '#f33';
+    return;
+  } else {
+    nick.style.backgroundColor = '#fff';
+  }
+
+  console.log("command: "+ message.value);
+  var obj = {
+    nick: nick.value,
+    message: message.value
+  };
+  for (cmd in localCommands) {
+    if (message.value.match("^/"+cmd)) {
+      obj = localCommands[cmd](obj);
+      break;
+    }
+  }
+
+  if (!obj) {
+    return;
+  }
+
+  console.log("sending: "+ JSON.stringify(obj));
+  PUBNUB.publish({
+    channel: channel,
+    message: JSON.stringify(obj),
+    x: (message.value = '')
+  });
+});
+
+}());
 
 </script>
 </body>
