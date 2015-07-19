@@ -53,6 +53,8 @@ input {
 </head>
 
 <body>
+
+<!-- "Fork me on Github" banner -->
 <a href="https://github.com/bad-attitude/bad-attitude.github.io/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/121cd7cbdc3e4855075ea8b558508b91ac463ac2/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f677265656e5f3030373230302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_green_007200.png"></a>
 
 <h1>bad-attitude</h1>
@@ -75,6 +77,95 @@ var channel = 'bad-attitude';
 
 function clean(text) {
   return (''+text).trim().replace( /[<>]/g, '' );
+}
+
+// Generate the key from the URL fragment
+// XXX: This might mean that the key won't be ready if we need it,
+// but that seems unlikely, and we can detect it.
+var CRYPTO = window.crypto.subtle;
+var ALGO_HMAC = {name: "HMAC", hash: "SHA-256"};
+var ALGO_KEY = "AES-GCM";
+var ALGO_ENCRYPT = {
+  name: "AES-GCM",
+  tagLength: 128,
+  iv: new Uint8Array(12)
+};
+var key = (function() {
+  var fragment = window.location.hash.replace(/^#/, "");
+  var fragmentData = new Uint8Array(fragment.length);
+  for (var i=0; i<fragmentData.length; ++i) {
+    fragmentData[i] = fragment.charCodeAt(i);
+  }
+
+  var zeros = new Uint8Array(32);
+  for (var i=0; i<zeros.length; ++i) {
+    zeros[i] = 0;
+  }
+
+  // HKDF(frag) = HMAC(HMAC(0, frag), 0x01)
+  return CRYPTO.importKey("raw", zeros, ALGO_HMAC, false, ["sign"])
+    .then(function(zeroKey) {
+      return CRYPTO.sign(ALGO_HMAC, zeroKey, fragmentData);
+    })
+    .then(function(macData) {
+      return CRYPTO.importKey("raw", macData, ALGO_HMAC, false, ["sign"]);
+    })
+    .then(function(macKey) {
+      return CRYPTO.sign(ALGO_HMAC, macKey, new Uint8Array([0x01]));
+    })
+    .then(function(keyData) {
+      return CRYPTO.importKey("raw", keyData, ALGO_KEY, false, ["encrypt", "decrypt"]);
+    })
+})();
+
+function isCryptoReady() {
+  return key != null;
+}
+
+// Returns nonce || ciphertext
+function encrypt(str) {
+  if (!isCryptoReady()) {
+    throw "encrypt() call without key available";
+    // But you should really call isCryptoReady() yourself
+  }
+
+  var plaintext = new Uint8Array(str.length);
+  for (var i=0; i<str.length; ++i) {
+    plaintext[i] = str.charCodeAt(i);
+  }
+
+  window.crypto.getRandomValues(ALGO_ENCRYPT.iv);
+  return key.then(function(cryptoKey) {
+      return CRYPTO.encrypt(ALGO_ENCRYPT, cryptoKey, plaintext)
+    })
+    .then(function(ciphertext) {
+      var output = new Uint8Array(ALGO_ENCRYPT.iv.length + ciphertext.byteLength);
+      output.set(ALGO_ENCRYPT.iv, 0);
+      output.set(new Uint8Array(ciphertext), ALGO_ENCRYPT.iv.length);
+      return window.btoa(String.fromCharCode.apply(null, output));
+    });
+}
+
+function decrypt(base64) {
+  var byteString = atob(base64);
+  var nonceAndCiphertext = new Uint8Array(byteString.length);
+  for (var i=0; i<byteString.length; ++i) {
+    nonceAndCiphertext[i] = byteString.charCodeAt(i);
+  }
+  var ciphertext = nonceAndCiphertext.subarray(ALGO_ENCRYPT.iv.length);
+
+  ALGO_ENCRYPT.iv.set(nonceAndCiphertext.subarray(0, ALGO_ENCRYPT.iv.length));
+  return key.then(function(cryptoKey) {
+      return CRYPTO.decrypt(ALGO_ENCRYPT, cryptoKey, ciphertext)
+    })
+    .then(function(plaintext) {
+      var plaintextBuffer = new Uint8Array(plaintext);
+      var plaintextString = "";
+      for (var i=0; i<plaintextBuffer.length; ++i) {
+        plaintextString += String.fromCharCode(plaintextBuffer[i]);
+      }
+      return plaintextString
+    });
 }
 
 function defaultDisplay(obj) {
@@ -200,39 +291,56 @@ var localCommands = {
   }
 };
 
+// Sync in from localStorage
+if (localStorage.nick && localStorage.nick.length > 0) {
+  nick.value = localStorage.nick;
+}
+if (localStorage.history && localStorage.history.length > 0) {
+  box.innerHTML = localStorage.history;
+  box.scrollTop = box.scrollHeight - 10;
+}
+
 PUBNUB.subscribe({
-    channel: channel,
-    callback: function(text) {
-      try {
-        var obj = JSON.parse(text);
-        obj.nick = clean(obj.nick);
-        obj.message = clean(obj.message);
+  channel: channel,
+  callback: function(text) {
+    // Special magic command!  For travis to force reload on commit
+    // https://ps10.pubnub.com/publish/demo/demo/0/bad-attitude/0/%22DUDE_YOU_SHOULD_TOTES_RELOAD%22
+    console.log("received: " + text);
+    if (text == "DUDE_YOU_SHOULD_TOTES_RELOAD") {
+      window.location.reload();
+      return;
+    }
 
-        // If there's a command, let it produce the message
-        var display = "";
-        for (cmd in commands) {
-          if (obj.message.match("^/"+cmd)) {
-            display = commands[cmd](obj);
-            break;
-          }
+    decrypt(text).then(function(plaintext) {
+      var obj = JSON.parse(plaintext);
+      obj.nick = clean(obj.nick);
+      obj.message = clean(obj.message);
+
+      // If there's a command, let it produce the message
+      var display = "";
+      for (cmd in commands) {
+        if (obj.message.match("^/"+cmd)) {
+          display = commands[cmd](obj);
+          break;
         }
-
-        // By default, "nick: message"
-        if (typeof display !== "string") {
-          display = defaultDisplay(obj);
-        }
-
-        box.innerHTML = box.innerHTML + '<br/>' + display;
-        box.scrollBy(0, box.scrollHeight);
-      } catch (e) {
-        console.log("bad message: "+ JSON.stringify(obj));
-        console.log("exception: "+ e);
-        box.innerHTML = box.innerHTML + '<br/>Bad message';
       }
+
+      // By default, "nick: message"
+      if (typeof display !== "string") {
+        display = defaultDisplay(obj);
+      }
+
+      box.innerHTML = box.innerHTML + '<br/>' + display;
+      box.scrollTop = box.scrollHeight - 10;
 
       localStorage.history = box.innerHTML;
       box.scrollTop = box.scrollHeight - 10;
-    }
+    })
+    .catch(function(error) {
+      console.log("receive/decrypt error: " + error);
+    });
+;
+  }
 });
 
 // Sync nick to localStorage
@@ -249,6 +357,7 @@ PUBNUB.bind('keyup', message, function(e) {
   }
   if (nick.value === '') {
     nick.style.backgroundColor = '#f33';
+    nick.focus();
     return;
   } else {
     nick.style.backgroundColor = '#fff';
@@ -259,6 +368,7 @@ PUBNUB.bind('keyup', message, function(e) {
     nick: nick.value,
     message: message.value
   };
+  message.value = '';
   for (cmd in localCommands) {
     if (message.value.match("^/"+cmd)) {
       obj = localCommands[cmd](obj);
@@ -271,11 +381,16 @@ PUBNUB.bind('keyup', message, function(e) {
   }
 
   console.log("sending: "+ JSON.stringify(obj));
-  PUBNUB.publish({
-    channel: channel,
-    message: JSON.stringify(obj),
-    x: (message.value = '')
-  });
+  encrypt(JSON.stringify(obj))
+    .then(function(ciphertext) {
+      PUBNUB.publish({
+        channel: channel,
+        message: ciphertext,
+      });
+    })
+    .catch(function(error) {
+      console.log("encrypt/send error: " + error);
+    });
 });
 
 })();
