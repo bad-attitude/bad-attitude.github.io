@@ -71,6 +71,13 @@ input {
 <script src=https://cdn.pubnub.com/pubnub.min.js></script>
 <script>
 
+
+(function(){
+var box = PUBNUB.$('box');
+var nick = PUBNUB.$('nick');
+var message = PUBNUB.$('message');
+var channel = 'bad-attitude';
+
 function clean(text) {
   return (''+text).trim().replace( /[<>]/g, '' );
 }
@@ -85,14 +92,14 @@ function clean(text) {
 // the risk of cascades.
 var commands = {
   // IRC-style /me command
-  "me": function(obj) {
+  me: function(obj) {
     var action = obj.message.replace(/^\/me[ ]+/, "");
     return "<i>" + obj.nick + " " + action  + "</i>";
   },
 
   // Forces all peers to reload the page.  This forces clients
   // to load new code.
-  "reload": function(obj) {
+  reload: function(obj) {
     window.location.reload();
   },
 };
@@ -102,19 +109,12 @@ var commands = {
 //   Output: The object to be sent, or something false if no
 //           object should be sent
 var localCommands = {
-  "flush": function() {
+  flush: function() {
     delete localStorage.history.
     box.innerHTML = "";
     return null;
   }
 };
-
-
-(function(){
-var box = PUBNUB.$('box');
-var nick = PUBNUB.$('nick');
-var message = PUBNUB.$('message');
-var channel = 'bad-attitude';
 
 // Sync in from localStorage
 if (localStorage.nick && localStorage.nick.length > 0) {
