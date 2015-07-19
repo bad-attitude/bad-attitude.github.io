@@ -58,21 +58,16 @@ input {
 <a href="https://github.com/bad-attitude/bad-attitude.github.io/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/121cd7cbdc3e4855075ea8b558508b91ac463ac2/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f677265656e5f3030373230302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_green_007200.png"></a>
 
 <h1>bad-attitude</h1>
-
 <div id="container">
-
 <input id="nick" placeholder="your-nick-here" /><br/>
-
 <div id="box"></div>
-
 <input id="message" placeholder="your-chat-here" /><br/>
-
 </div>
 
 
 <script src=https://cdn.pubnub.com/pubnub.min.js></script>
 <script>
-
+//<![CDATA[
 
 (function(){
 var box = PUBNUB.$('box');
@@ -173,11 +168,80 @@ function decrypt(base64) {
     });
 }
 
+function defaultDisplay(obj) {
+  return '<b>' + obj.nick + '</b>: ' + obj.message;
+}
+
+// Adapted from https://airhorner.com/scripts/main.min.js
+var Horn = function(path) {
+  // The Horn Player.
+
+  var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  var source;
+  var buffer;
+
+  var loadSound = function(bufferObj, callback) {
+    callback = callback || function() {};
+
+    var xhr = new XMLHttpRequest();
+
+    xhr.onload = function() {
+      audioCtx.decodeAudioData(xhr.response, function(decodedBuffer) {
+        callback(decodedBuffer);
+      });
+    };
+
+    xhr.open('GET', path );
+    xhr.responseType = 'arraybuffer';
+    xhr.send();
+  };
+
+
+  this.start = function(loop, loopStart, loopEnd) {
+    source = audioCtx.createBufferSource();
+
+    source.connect(audioCtx.destination);
+
+    source.buffer = buffer;
+
+    source.start(0);
+    source.loop = loop;
+    source.loopStart = loopStart || 0;
+    source.loopEnd = loopEnd || 1;
+  };
+
+  this.stop = function() {
+    source.stop();
+  };
+
+  var init = function() {
+    loadSound(buffer, function(decodedBuffer) {
+      buffer = decodedBuffer;
+    });
+  };
+
+  init();
+};
+
+// Sync in from localStorage
+if (localStorage.nick && localStorage.nick.length > 0) {
+  nick.value = localStorage.nick;
+}
+if (localStorage.history && localStorage.history.length > 0) {
+  box.innerHTML = localStorage.history;
+  box.scrollTop = box.scrollHeight - 10;
+}
+
+// Sounds we can play
+var airhorn = new Horn("./sound/airhorn.mp3");
+var crickets = new Horn("./sound/crickets.mp3");
+
 // The keys in this dictionary are used as IRC-style commands.
 // If a message starts with "/key", then commands["key"] will
 // be run.
 //  Input:  The object received from pubnub
-//  Output: The html to be added to the chat window
+//  Output: A string containing the HTML to render to the chat window,
+//     a non-string if you want the default rendering.
 //
 // WARNING: Do not send messages from these callbacks, due to
 // the risk of cascades.
@@ -192,18 +256,38 @@ var commands = {
   // to load new code.
   reload: function(obj) {
     window.location.reload();
+    return ""; // squelch output
+  },
+
+  // Play an airhorn sound
+  airhorn: function(obj) {
+    var command = obj.message.replace(/^\/airhorn[ ]+/, "");
+    switch (command) {
+      case "start": airhorn.start(true, 0.24, 0.34); break;
+      case "stop": airhorn.stop(); break;
+      default: airhorn.start(false); break;
+    }
+  },
+
+  // Play a cricket sound
+  crickets: function(obj) {
+    var command = obj.message.replace(/^\/crickets[ ]+/, "");
+    switch (command) {
+      case "start": crickets.start(true, 0.10, 1.75); break;
+      case "stop": crickets.stop(); break;
+      default: crickets.start(false); break;
+    }
   },
 };
 
 // Same as commands, but applied to outbound commands.
 //   Input:  The object about to be sent
-//   Output: The object to be sent, or something false if no
+//   Output: The object to be sent, or something falsy if no
 //           object should be sent
 var localCommands = {
   flush: function() {
     delete localStorage.history;
     box.innerHTML = "";
-    return null;
   }
 };
 
@@ -243,8 +327,8 @@ PUBNUB.subscribe({
         }
 
         // By default, "nick: message"
-        if (display == "") {
-          display = '<b>' + obj.nick + '</b>: ' + obj.message;
+        if (typeof display !== "string") {
+          display = defaultDisplay(obj);
         }
 
         box.innerHTML = box.innerHTML + '<br/>' + display;
@@ -280,6 +364,7 @@ PUBNUB.bind('keyup', message, function(e) {
     nick.style.backgroundColor = '#fff';
   }
 
+  console.log("command: "+ message.value);
   var obj = {
     nick: nick.value,
     message: message.value
@@ -306,8 +391,8 @@ PUBNUB.bind('keyup', message, function(e) {
     });
 });
 
-}());
-
+})();
+//]]>
 </script>
 </body>
 </html>
