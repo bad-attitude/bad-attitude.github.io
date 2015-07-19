@@ -82,6 +82,94 @@ function clean(text) {
   return (''+text).trim().replace( /[<>]/g, '' );
 }
 
+// Generate the key from the URL fragment
+// XXX: This might mean that the key won't be ready if we need it,
+// but that seems unlikely, and we can detect it.
+var key = null;
+var CRYPTO = window.crypto.subtle;
+var ALGO_HMAC = {name: "HMAC", hash: "SHA-256"};
+var ALGO_KEY = "AES-GCM";
+var ALGO_ENCRYPT = {
+  name: "AES-GCM",
+  tagLength: 128,
+  iv: new Uint8Array(12)
+};
+(function() {
+  var fragment = window.location.hash.replace("^#", "");
+  var fragmentData = new Uint8Array(fragment.length);
+  for (var i=0; i<fragmentData.length; ++i) {
+    fragmentData[i] = fragment.charCodeAt(i);
+  }
+
+  var zeros = new Uint8Array(32);
+  for (var i=0; i<zeros.length; ++i) {
+    zeros[i] = 0;
+  }
+
+  // HKDF(frag) = HMAC(HMAC(0, frag), 0x01)
+  CRYPTO.importKey("raw", zeros, ALGO_HMAC, false, ["sign"])
+    .then(function(zeroKey) {
+      return CRYPTO.sign(ALGO_HMAC, zeroKey, fragmentData);
+    })
+    .then(function(macData) {
+      return CRYPTO.importKey("raw", macData, ALGO_HMAC, false, ["sign"]);
+    })
+    .then(function(macKey) {
+      return CRYPTO.sign(ALGO_HMAC, macKey, new Uint8Array([0x01]));
+    })
+    .then(function(keyData) {
+      return CRYPTO.importKey("raw", keyData, ALGO_KEY, false, ["encrypt", "decrypt"]);
+    })
+    .then(function(cryptoKey) {
+      return key = cryptoKey;
+    });
+})();
+
+function isCryptoReady() {
+  return key != null;
+}
+
+// Returns nonce || ciphertext
+function encrypt(str) {
+  if (!isCryptoReady()) {
+    throw "encrypt() call without key available";
+    // But you should really call isCryptoReady() yourself
+  }
+
+  var plaintext = new Uint8Array(str.length);
+  for (var i=0; i<str.length; ++i) {
+    plaintext[i] = str.charCodeAt(i);
+  }
+
+  window.crypto.getRandomValues(ALGO_ENCRYPT.iv);
+  return CRYPTO.encrypt(ALGO_ENCRYPT, key, plaintext)
+    .then(function(ciphertext) {
+      var output = new Uint8Array(ALGO_ENCRYPT.iv.length + ciphertext.byteLength);
+      output.set(ALGO_ENCRYPT.iv, 0);
+      output.set(new Uint8Array(ciphertext), ALGO_ENCRYPT.iv.length);
+      return window.btoa(String.fromCharCode.apply(null, output));
+    });
+}
+
+function decrypt(base64) {
+  var byteString = atob(base64);
+  var nonceAndCiphertext = new Uint8Array(byteString.length);
+  for (var i=0; i<byteString.length; ++i) {
+    nonceAndCiphertext[i] = byteString.charCodeAt(i);
+  }
+
+  ALGO_ENCRYPT.iv.set(nonceAndCiphertext.slice(0, ALGO_ENCRYPT.iv.length));
+  return CRYPTO.decrypt(ALGO_ENCRYPT, key, nonceAndCiphertext.slice(ALGO_ENCRYPT.iv.length))
+    .then(function(plaintext) {
+      var plaintextBuffer = new Uint8Array(plaintext);
+      var plaintextString = "";
+      for (var i=0; i<plaintextBuffer.length; ++i) {
+        plaintextString += String.fromCharCode(plaintextBuffer[i]);
+      }
+      return plaintextString
+    });
+}
+
 // The keys in this dictionary are used as IRC-style commands.
 // If a message starts with "/key", then commands["key"] will
 // be run.
@@ -126,10 +214,11 @@ if (localStorage.history && localStorage.history.length > 0) {
 }
 
 PUBNUB.subscribe({
-    channel: channel,
-    callback: function(text) {
+  channel: channel,
+  callback: function(text) {
+    decrypt(text).then(function(plaintext) {
       try {
-        var obj = JSON.parse(text);
+        var obj = JSON.parse(plaintext);
         obj.nick = clean(obj.nick);
         obj.message = clean(obj.message);
 
@@ -157,7 +246,8 @@ PUBNUB.subscribe({
 
       localStorage.history = box.innerHTML;
       box.scrollTop = box.scrollHeight - 10;
-    }
+    });
+  }
 });
 
 // Sync nick to localStorage
@@ -179,7 +269,6 @@ PUBNUB.bind('keyup', message, function(e) {
     nick.style.backgroundColor = '#fff';
   }
 
-  console.log("command: "+ message.value);
   var obj = {
     nick: nick.value,
     message: message.value
@@ -196,11 +285,14 @@ PUBNUB.bind('keyup', message, function(e) {
   }
 
   console.log("sending: "+ JSON.stringify(obj));
-  PUBNUB.publish({
-    channel: channel,
-    message: JSON.stringify(obj),
-    x: (message.value = '')
-  });
+  encrypt(JSON.stringify(obj))
+    .then(function(ciphertext) {
+      PUBNUB.publish({
+        channel: channel,
+        message: ciphertext,
+        x: (message.value = '')
+      });
+    });
 });
 
 }());
