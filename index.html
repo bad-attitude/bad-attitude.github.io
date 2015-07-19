@@ -81,6 +81,58 @@ function defaultDisplay(obj) {
   return '<b>' + obj.nick + '</b>: ' + obj.message;
 }
 
+// Adapted from https://airhorner.com/scripts/main.min.js
+var Horn = function(path) {
+  // The Horn Player.
+
+  var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  var source;
+  var buffer;
+
+  var loadSound = function(bufferObj, callback) {
+    callback = callback || function() {};
+
+    var xhr = new XMLHttpRequest();
+
+    xhr.onload = function() {
+      audioCtx.decodeAudioData(xhr.response, function(decodedBuffer) {
+        callback(decodedBuffer);
+      });
+    };
+
+    xhr.open('GET', path );
+    xhr.responseType = 'arraybuffer';
+    xhr.send();
+  };
+
+
+  this.start = function(loop, loopStart, loopEnd) {
+    source = audioCtx.createBufferSource();
+
+    source.connect(audioCtx.destination);
+
+    source.buffer = buffer;
+
+    source.start(0);
+    source.loop = loop;
+    source.loopStart = loopStart || 0;
+    source.loopEnd = loopEnd || 1;
+  };
+
+  this.stop = function() {
+    source.stop();
+  };
+
+  var init = function() {
+    loadSound(buffer, function(decodedBuffer) {
+      buffer = decodedBuffer;
+    });
+  };
+
+  init();
+};
+
+
 // Sounds we can play
 var airhorn = new Horn("./sound/airhorn.mp3");
 var crickets = new Horn("./sound/crickets.mp3");
@@ -109,7 +161,6 @@ var commands = {
   // Play an airhorn sound
   airhorn: function(obj) {
     var command = obj.message.replace(/^\/airhorn[ ]+/, "");
-    console.log(command)
     switch (command) {
       case "start": airhorn.start(true, 0.24, 0.34); break;
       case "stop": airhorn.stop(); break;
@@ -121,7 +172,6 @@ var commands = {
   // Play a cricket sound
   "crickets": function(obj) {
     var command = obj.message.replace(/^\/crickets[ ]+/, "");
-    console.log(command)
     switch (command) {
       case "start": crickets.start(true, 0.10, 1.75); break;
       case "stop": crickets.stop(); break;
