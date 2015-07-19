@@ -1,0 +1,140 @@
+<html>
+
+<head>
+<title>bad-attitude</title>
+<style>
+
+body {
+  font-size: 12pt;
+  font-family: Monaco, monospace;
+  color: #0F2;
+  background-color: #111;
+}
+
+h1 {
+  font-size: 12pt;
+  text-align: center;
+}
+
+#container {
+  width: 40em;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1ex;
+}
+
+input {
+  width: 98.5%;
+  font-family: Monaco, monospace;
+  padding: 1ex;
+  margin-bottom: 1ex;
+  margin-top: 1ex;
+}
+
+#box {
+  width: 98%;
+  height:10em;
+  overflow:scroll;
+  border: 1px solid black;
+  background-color: #eee;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>bad-attitude</h1>
+
+<div id="container">
+
+<input id="nick" placeholder="your-nick-here" /><br/>
+
+<div id="box"></div>
+
+<input id="message" placeholder="your-chat-here" /><br/>
+
+</div>
+
+
+<script src=http://cdn.pubnub.com/pubnub.js></script>
+<script>
+
+function clean(text) {
+  return (''+text).replace( /[<>]/g, '' );
+}
+
+// The keys in this dictionary are used as IRC-style commands.
+// If a message starts with "/key", then commands["key"] will
+// be run.
+//  Input: the object received from pubnub
+//  Output: The html to be added to the chat window
+//
+// WARNING: Do not send messages from these callbacks, due to
+// the risk of cascades.
+var commands = {
+  "me": function(obj) {
+    var action = obj.message.replace(/^\/me[ ]+/, "");
+    return "<i>" + obj.nick + " " + action  + "</i>";
+  },
+
+  "reload": function(obj) {
+    window.location.reload();
+  },
+};
+
+
+(function(){
+var box = PUBNUB.$('box');
+var nick = PUBNUB.$('nick');
+var message = PUBNUB.$('message');
+var channel = 'bad-attitude';
+
+PUBNUB.subscribe({
+    channel  : channel,
+    callback : function(text) {
+      try {
+        var obj = JSON.parse(text);
+        obj.nick = clean(obj.nick);
+        obj.message = clean(obj.message);
+
+        // If there's a command, let it produce the message
+        var display = "";
+        for (cmd in commands) {
+          if (obj.message.match("^/"+cmd)) {
+            display = commands[cmd](obj);
+            break;
+          }
+        }
+
+        // By default, "nick: message"
+        if (display == "") {
+          display = '<b>' + obj.nick + '</b>: ' + obj.message;
+        }
+
+        box.innerHTML = box.innerHTML + '<br/>' + display;
+      } catch (e) {
+        console.log("bad message: "+ JSON.stringify(obj));
+        console.log("exception: "+ e);
+        box.innerHTML = box.innerHTML + '<br/>Bad message';
+      }
+    }
+});
+PUBNUB.bind( 'keyup', message, function(e) {
+    (e.keyCode || e.charCode) === 13 && PUBNUB.publish({
+        channel: channel,
+        message: JSON.stringify({
+          nick: nick.value,
+          message: message.value
+        }),
+        x: (function() {
+          message.value = '';
+          box.scrollTop = box.scrollHeight + 10;
+        })()
+    })
+} )
+})()
+
+</script>
+</body>
+</html>
