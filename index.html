@@ -87,7 +87,6 @@ function clean(text) {
 // Generate the key from the URL fragment
 // XXX: This might mean that the key won't be ready if we need it,
 // but that seems unlikely, and we can detect it.
-var key = null;
 var CRYPTO = window.crypto.subtle;
 var ALGO_HMAC = {name: "HMAC", hash: "SHA-256"};
 var ALGO_KEY = "AES-GCM";
@@ -96,8 +95,8 @@ var ALGO_ENCRYPT = {
   tagLength: 128,
   iv: new Uint8Array(12)
 };
-(function() {
-  var fragment = window.location.hash.replace("^#", "");
+var key = (function() {
+  var fragment = window.location.hash.replace(/^#/, "");
   var fragmentData = new Uint8Array(fragment.length);
   for (var i=0; i<fragmentData.length; ++i) {
     fragmentData[i] = fragment.charCodeAt(i);
@@ -109,7 +108,7 @@ var ALGO_ENCRYPT = {
   }
 
   // HKDF(frag) = HMAC(HMAC(0, frag), 0x01)
-  CRYPTO.importKey("raw", zeros, ALGO_HMAC, false, ["sign"])
+  return CRYPTO.importKey("raw", zeros, ALGO_HMAC, false, ["sign"])
     .then(function(zeroKey) {
       return CRYPTO.sign(ALGO_HMAC, zeroKey, fragmentData);
     })
@@ -122,9 +121,6 @@ var ALGO_ENCRYPT = {
     .then(function(keyData) {
       return CRYPTO.importKey("raw", keyData, ALGO_KEY, false, ["encrypt", "decrypt"]);
     })
-    .then(function(cryptoKey) {
-      return key = cryptoKey;
-    });
 })();
 
 function isCryptoReady() {
@@ -144,7 +140,9 @@ function encrypt(str) {
   }
 
   window.crypto.getRandomValues(ALGO_ENCRYPT.iv);
-  return CRYPTO.encrypt(ALGO_ENCRYPT, key, plaintext)
+  return key.then(function(cryptoKey) {
+      return CRYPTO.encrypt(ALGO_ENCRYPT, cryptoKey, plaintext)
+    })
     .then(function(ciphertext) {
       var output = new Uint8Array(ALGO_ENCRYPT.iv.length + ciphertext.byteLength);
       output.set(ALGO_ENCRYPT.iv, 0);
@@ -159,9 +157,12 @@ function decrypt(base64) {
   for (var i=0; i<byteString.length; ++i) {
     nonceAndCiphertext[i] = byteString.charCodeAt(i);
   }
+  var ciphertext = nonceAndCiphertext.subarray(ALGO_ENCRYPT.iv.length);
 
   ALGO_ENCRYPT.iv.set(nonceAndCiphertext.subarray(0, ALGO_ENCRYPT.iv.length));
-  return CRYPTO.decrypt(ALGO_ENCRYPT, key, nonceAndCiphertext.subarray(ALGO_ENCRYPT.iv.length))
+  return key.then(function(cryptoKey) {
+      return CRYPTO.decrypt(ALGO_ENCRYPT, cryptoKey, ciphertext)
+    })
     .then(function(plaintext) {
       var plaintextBuffer = new Uint8Array(plaintext);
       var plaintextString = "";
