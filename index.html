@@ -53,6 +53,8 @@ input {
 </head>
 
 <body>
+
+<!-- "Fork me on Github" banner -->
 <a href="https://github.com/bad-attitude/bad-attitude.github.io/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/121cd7cbdc3e4855075ea8b558508b91ac463ac2/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f677265656e5f3030373230302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_green_007200.png"></a>
 
 <h1>bad-attitude</h1>
@@ -158,8 +160,8 @@ function decrypt(base64) {
     nonceAndCiphertext[i] = byteString.charCodeAt(i);
   }
 
-  ALGO_ENCRYPT.iv.set(nonceAndCiphertext.slice(0, ALGO_ENCRYPT.iv.length));
-  return CRYPTO.decrypt(ALGO_ENCRYPT, key, nonceAndCiphertext.slice(ALGO_ENCRYPT.iv.length))
+  ALGO_ENCRYPT.iv.set(nonceAndCiphertext.subarray(0, ALGO_ENCRYPT.iv.length));
+  return CRYPTO.decrypt(ALGO_ENCRYPT, key, nonceAndCiphertext.subarray(ALGO_ENCRYPT.iv.length))
     .then(function(plaintext) {
       var plaintextBuffer = new Uint8Array(plaintext);
       var plaintextString = "";
@@ -216,6 +218,14 @@ if (localStorage.history && localStorage.history.length > 0) {
 PUBNUB.subscribe({
   channel: channel,
   callback: function(text) {
+    // Special magic command!  For travis to force reload on commit
+    // https://ps10.pubnub.com/publish/demo/demo/0/bad-attitude/0/%22DUDE_YOU_SHOULD_TOTES_RELOAD%22
+    console.log("received: " + text);
+    if (text == "DUDE_YOU_SHOULD_TOTES_RELOAD") {
+      window.location.reload();
+      return;
+    }
+
     decrypt(text).then(function(plaintext) {
       try {
         var obj = JSON.parse(plaintext);
@@ -237,7 +247,7 @@ PUBNUB.subscribe({
         }
 
         box.innerHTML = box.innerHTML + '<br/>' + display;
-        box.scrollBy(0, box.scrollHeight);
+        box.scrollTop = box.scrollHeight - 10;
       } catch (e) {
         console.log("bad message: "+ JSON.stringify(obj));
         console.log("exception: "+ e);
@@ -273,6 +283,7 @@ PUBNUB.bind('keyup', message, function(e) {
     nick: nick.value,
     message: message.value
   };
+  message.value = '';
   for (cmd in localCommands) {
     if (message.value.match("^/"+cmd)) {
       obj = localCommands[cmd](obj);
@@ -290,7 +301,6 @@ PUBNUB.bind('keyup', message, function(e) {
       PUBNUB.publish({
         channel: channel,
         message: ciphertext,
-        x: (message.value = '')
       });
     });
 });
