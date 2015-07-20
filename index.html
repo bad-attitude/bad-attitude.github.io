@@ -283,6 +283,14 @@ var commands = {
       default: crickets.start(false); break;
     }
   },
+
+  // Direct message in the hackiest possible way: send the message
+  // to everyone, and all of the non-targets ignore it.
+  msg: function(obj) {
+    var command = obj.message.match(/^\/msg\s+(\S+)\s+(.*)/);
+    if (!command || (command[1] !== nick.value)) { return " "; }
+    return false;
+  }
 };
 
 // Same as commands, but applied to outbound commands.
@@ -301,7 +309,6 @@ var localCommands = {
       '<br/>commands available: <br/>&nbsp;&nbsp;/' +
       cmds.join('<br/>&nbsp;&nbsp;/');
     box.scrollTop = box.scrollHeight - 10;
-    return false;
   },
 };
 
