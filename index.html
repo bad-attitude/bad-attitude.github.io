@@ -5,40 +5,39 @@
 <style>
 
 body {
-  font-size: 12pt;
-  font-family: Monaco, monospace;
+  font-size: 11pt;
+  font-family: Lucida Sans Typewriter,Lucida Console,monaco,Bitstream Vera Sans Mono,monospace;
   background-color: #111;
+  color: #aaa;
 }
 
 h1 {
   font-size: 12pt;
   text-align: center;
-  color: #0F2;
 }
 
 #container {
   max-width: 800px;
   width: 80%;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto;
+  padding: 1ex;
+}
+#container td > * {
+  width: 100%;
+  margin: 0;
   padding: 1ex;
 }
 
 input {
-  width: 98.5%;
-  font-family: Monaco, monospace;
-  padding: 1ex;
-  margin-bottom: 1ex;
-  margin-top: 1ex;
+  font-family: Lucida Sans Typewriter,Lucida Console,monaco,Bitstream Vera Sans Mono,monospace;
+  background-color: #111;
+  color: #eee;
+  border: 1px solid #888;
 }
 
 #box {
-  width: 95%;
-  height:10em;
-  overflow:scroll;
-  border: 1px solid black;
-  background-color: #eee;
-  padding: 1ex;
+  height: 10em;
+  overflow: scroll;
 }
 
 </style>
@@ -58,11 +57,14 @@ input {
 <a href="https://github.com/bad-attitude/bad-attitude.github.io/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/121cd7cbdc3e4855075ea8b558508b91ac463ac2/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f677265656e5f3030373230302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_green_007200.png"></a>
 
 <h1>bad-attitude</h1>
-<div id="container">
-<input id="nick" placeholder="your-nick-here" /><br/>
-<div id="box"></div>
-<input id="message" placeholder="your-chat-here" /><br/>
-</div>
+<table id=container>
+<col width=80px/><col/>
+<tr><td colspan=2><div id=box></div></td></tr>
+<tr>
+<td><input id="nick" placeholder="your-nick-here" /></td>
+<td><input id="message" placeholder="your-chat-here" /></td>
+</tr>
+</table>
 
 
 <script src=https://cdn.pubnub.com/pubnub.min.js></script>
@@ -118,17 +120,8 @@ var key = (function() {
     })
 })();
 
-function isCryptoReady() {
-  return key != null;
-}
-
 // Returns nonce || ciphertext
 function encrypt(str) {
-  if (!isCryptoReady()) {
-    throw "encrypt() call without key available";
-    // But you should really call isCryptoReady() yourself
-  }
-
   var plaintext = new Uint8Array(str.length);
   for (var i=0; i<str.length; ++i) {
     plaintext[i] = str.charCodeAt(i);
@@ -346,7 +339,7 @@ PUBNUB.subscribe({
 // Sync nick to localStorage
 PUBNUB.bind('change', nick, function(e) {
   if (nick.value !== '') {
-    nick.style.backgroundColor = '#fff';
+    nick.style.backgroundColor = '#111';
     localStorage.nick = nick.value;
   }
 });
@@ -356,11 +349,11 @@ PUBNUB.bind('keyup', message, function(e) {
     return;
   }
   if (nick.value === '') {
-    nick.style.backgroundColor = '#f33';
+    nick.style.backgroundColor = '#a33';
     nick.focus();
     return;
   } else {
-    nick.style.backgroundColor = '#fff';
+    nick.style.backgroundColor = '#111';
   }
 
   console.log("command: "+ message.value);
