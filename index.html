@@ -79,7 +79,7 @@ var channel = 'bad-attitude';
 
 function clean(text) {
   var i = 0, m;
-  text = text.replace(/&/g, '&amp;').replace(/</g, '&gt;');
+  text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   while((m = /\b(https?:\/\/\S+)/.exec(text.substring(i)))) {
     var ins = '<a href="' + encodeURI(m[1]) + '">' + m[1] + '</a>';
     text = text.substring(0, i + m.index) + ins +
