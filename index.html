@@ -168,6 +168,31 @@ function decrypt(base64) {
     });
 }
 
+var commandHistory = {
+  limit:  50,
+  buffer: [],
+  index: 0,
+  store: function(line) {
+    this.buffer.unshift(line)
+    if (this.buffer.length > this.limit) {
+      this.buffer.pop();
+    }
+  },
+  up: function() {
+    var ret = (this.index > -1)? this.buffer[this.index] : "";
+    this.index += (this.index < this.buffer.length - 1)? 1 : 0;
+    return ret;
+  },
+  down: function() {
+    var ret = (this.index > -1)? this.buffer[this.index] : "";
+    this.index -= (this.index >= 0)? 1 : 0;
+    return ret;
+  },
+  reset: function() {
+    this.index = 0;
+  },
+};
+
 function defaultDisplay(obj) {
   return obj.nick + ': ' + obj.message;
 }
@@ -367,7 +392,18 @@ PUBNUB.bind('change', nick, function(e) {
 });
 
 PUBNUB.bind('keyup', message, function(e) {
-  if ((e.keyCode || e.charCode) !== 13) {
+  var code = (e.keyCode || e.charCode);
+
+  if (code === 38) { // Up arrow
+    message.value = commandHistory.up();
+    return;
+  } else if (code === 40) { // Down arrow
+    message.value = commandHistory.down();
+    return;
+  }
+
+  // Everything below is for Enter
+  if (code !== 13) {
     return;
   }
   if (nick.value === '') {
@@ -394,6 +430,8 @@ PUBNUB.bind('keyup', message, function(e) {
   }
 
   console.log("sending (decrypted): "+ JSON.stringify(obj));
+  commandHistory.store(obj.message);
+  commandHistory.reset();
   encrypt(JSON.stringify(obj))
     .then(function(ciphertext) {
       console.log("sending (encrypted): "+ ciphertext);
