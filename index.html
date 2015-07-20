@@ -78,7 +78,15 @@ var message = PUBNUB.$('message');
 var channel = 'bad-attitude';
 
 function clean(text) {
-  return (''+text).trim().replace( /[<>]/g, '' );
+  var i = 0, m;
+  text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  while((m = /\b(https?:\/\/\S+)/.exec(text.substring(i)))) {
+    var ins = '<a href="' + encodeURI(m[1]) + '">' + m[1] + '</a>';
+    text = text.substring(0, i + m.index) + ins +
+      text.substring(i + m.index + m[1].length);
+    i += m.index + ins.length;
+  }
+  return text;
 }
 
 // Generate the key from the URL fragment
@@ -328,6 +336,7 @@ PUBNUB.subscribe({
         display = defaultDisplay(obj);
       }
 
+      console.log('display: ' + display);
       box.innerHTML = box.innerHTML + '<br/>' + display;
       box.scrollTop = box.scrollHeight - 10;
 
