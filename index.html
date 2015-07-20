@@ -111,13 +111,8 @@ var key = (function() {
   console.log("fragmentData: ");
   console.log(fragmentData);
 
-  var zeros = new Uint8Array(32);
-  for (var i=0; i<zeros.length; ++i) {
-    zeros[i] = 0;
-  }
-
   // HKDF(frag) = HMAC(HMAC(0, frag), 0x01)
-  return CRYPTO.importKey("raw", zeros, ALGO_HMAC, false, ["sign"])
+  return CRYPTO.importKey("raw", new Uint8Array(1), ALGO_HMAC, false, ["sign"])
     .then(function(zeroKey) {
       return CRYPTO.sign(ALGO_HMAC, zeroKey, fragmentData);
     })
@@ -129,7 +124,7 @@ var key = (function() {
     })
     .then(function(keyData) {
       return CRYPTO.importKey("raw", keyData, ALGO_KEY, false, ["encrypt", "decrypt"]);
-    })
+    });
 })();
 
 // Returns nonce || ciphertext
@@ -141,7 +136,7 @@ function encrypt(str) {
 
   window.crypto.getRandomValues(ALGO_ENCRYPT.iv);
   return key.then(function(cryptoKey) {
-      return CRYPTO.encrypt(ALGO_ENCRYPT, cryptoKey, plaintext)
+      return CRYPTO.encrypt(ALGO_ENCRYPT, cryptoKey, plaintext);
     })
     .then(function(ciphertext) {
       var output = new Uint8Array(ALGO_ENCRYPT.iv.length + ciphertext.byteLength);
@@ -161,7 +156,7 @@ function decrypt(base64) {
 
   ALGO_ENCRYPT.iv.set(nonceAndCiphertext.subarray(0, ALGO_ENCRYPT.iv.length));
   return key.then(function(cryptoKey) {
-      return CRYPTO.decrypt(ALGO_ENCRYPT, cryptoKey, ciphertext)
+      return CRYPTO.decrypt(ALGO_ENCRYPT, cryptoKey, ciphertext);
     })
     .then(function(plaintext) {
       var plaintextBuffer = new Uint16Array(plaintext);
@@ -169,7 +164,7 @@ function decrypt(base64) {
       for (var i=0; i<plaintextBuffer.length; ++i) {
         plaintextString += String.fromCharCode(plaintextBuffer[i]);
       }
-      return plaintextString
+      return plaintextString;
     });
 }
 
@@ -345,15 +340,12 @@ PUBNUB.subscribe({
 
       console.log('display: ' + display);
       box.innerHTML = box.innerHTML + '<br/>' + display;
-      box.scrollTop = box.scrollHeight - 10;
-
       localStorage.history = box.innerHTML;
       box.scrollTop = box.scrollHeight - 10;
     })
     .catch(function(error) {
       console.log("receive/decrypt error: " + error);
     });
-;
   }
 });
 
