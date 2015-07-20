@@ -228,15 +228,6 @@ var Horn = function(path) {
   init();
 };
 
-// Sync in from localStorage
-if (localStorage.nick && localStorage.nick.length > 0) {
-  nick.value = localStorage.nick;
-}
-if (localStorage.history && localStorage.history.length > 0) {
-  box.innerHTML = localStorage.history;
-  box.scrollTop = box.scrollHeight - 10;
-}
-
 // Sounds we can play
 var airhorn = new Horn("./sound/airhorn.mp3");
 var crickets = new Horn("./sound/crickets.mp3");
@@ -246,7 +237,8 @@ var crickets = new Horn("./sound/crickets.mp3");
 // be run.
 //  Input:  The object received from pubnub
 //  Output: A string containing the HTML to render to the chat window,
-//     something falsy if you want the default rendering.
+//     0 to keep anything from being renndered, and something else falsy if you
+//     want the default rendering.
 //
 // WARNING: Do not send messages from these callbacks, due to
 // the risk of cascades.
@@ -288,8 +280,15 @@ var commands = {
   // to everyone, and all of the non-targets ignore it.
   msg: function(obj) {
     var command = obj.message.match(/^\/msg\s+(\S+)\s+(.*)/);
-    if (!command || (command[1] !== nick.value)) { return " "; }
-    return false;
+    if (!command || (command[1] !== nick.value)) { return 0; }
+    return "<i>" + obj.nick + " (privately)</i>: " + command[2];
+  },
+
+  // Kick, using the totally secure approach of /msg
+  kick: function(obj) {
+    var command = obj.message.match(/^\/kick\s+(\S+)/);
+    if (!command || (command[1] !== nick.value)) { return 0; }
+    window.location.href = 'https://en.wikipedia.org/wiki/Kick';
   }
 };
 
@@ -299,7 +298,7 @@ var commands = {
 //           object should be sent
 var localCommands = {
   clear: function() {
-    delete localStorage.history;
+    localStorage.history = "";
     box.innerHTML = "";
   },
   help: function() {
@@ -343,6 +342,9 @@ PUBNUB.subscribe({
       cmd = obj.message.match(/^\/(\S+)/);
       if (cmd && commands.hasOwnProperty(cmd[1])) {
         display = commands[cmd[1]](obj);
+        if (display === 0) {
+          return;
+        }
       }
 
       // By default, "nick: message"
