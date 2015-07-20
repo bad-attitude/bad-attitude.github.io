@@ -234,7 +234,7 @@ var crickets = new Horn("./sound/crickets.mp3");
 // be run.
 //  Input:  The object received from pubnub
 //  Output: A string containing the HTML to render to the chat window,
-//     a non-string if you want the default rendering.
+//     something falsy if you want the default rendering.
 //
 // WARNING: Do not send messages from these callbacks, due to
 // the risk of cascades.
@@ -298,19 +298,20 @@ PUBNUB.subscribe({
   callback: function(text) {
     // Special magic command!  For travis to force reload on commit
     // https://ps10.pubnub.com/publish/demo/demo/0/bad-attitude/0/%22DUDE_YOU_SHOULD_TOTES_RELOAD%22
-    console.log("received: " + text);
+    console.log("received (encrypted): " + text);
     if (text == "DUDE_YOU_SHOULD_TOTES_RELOAD") {
       window.location.reload();
       return;
     }
 
     decrypt(text).then(function(plaintext) {
+      console.log("received (decrypted): " + plaintext);
       var obj = JSON.parse(plaintext);
       obj.nick = clean(obj.nick);
       obj.message = clean(obj.message);
 
       // If there's a command, let it produce the message
-      var display = "";
+      var display = null;
       for (cmd in commands) {
         if (obj.message.match("^/"+cmd)) {
           display = commands[cmd](obj);
@@ -319,7 +320,7 @@ PUBNUB.subscribe({
       }
 
       // By default, "nick: message"
-      if (typeof display !== "string") {
+      if (!display) {
         display = defaultDisplay(obj);
       }
 
@@ -373,9 +374,10 @@ PUBNUB.bind('keyup', message, function(e) {
     return;
   }
 
-  console.log("sending: "+ JSON.stringify(obj));
+  console.log("sending (decrypted): "+ JSON.stringify(obj));
   encrypt(JSON.stringify(obj))
     .then(function(ciphertext) {
+      console.log("sending (encrypted): "+ ciphertext);
       PUBNUB.publish({
         channel: channel,
         message: ciphertext,
