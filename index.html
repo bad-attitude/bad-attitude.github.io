@@ -290,10 +290,19 @@ var commands = {
 //   Output: The object to be sent, or something falsy if no
 //           object should be sent
 var localCommands = {
-  flush: function() {
+  clear: function() {
     delete localStorage.history;
     box.innerHTML = "";
-  }
+  },
+  help: function() {
+    var cmds = Object.keys(localCommands).concat(Object.keys(commands));
+    cmds.sort();
+    box.innerHTML = box.innerHTML +
+      '<br/>commands available: <br/>&nbsp;&nbsp;/' +
+      cmds.join('<br/>&nbsp;&nbsp;/');
+    box.scrollTop = box.scrollHeight - 10;
+    return false;
+  },
 };
 
 // Sync in from localStorage
@@ -324,11 +333,9 @@ PUBNUB.subscribe({
 
       // If there's a command, let it produce the message
       var display = null;
-      for (cmd in commands) {
-        if (obj.message.match("^/"+cmd)) {
-          display = commands[cmd](obj);
-          break;
-        }
+      cmd = obj.message.match(/^\/(\S+)/);
+      if (cmd && commands.hasOwnProperty(cmd[1])) {
+        display = commands[cmd[1]](obj);
       }
 
       // By default, "nick: message"
@@ -376,11 +383,9 @@ PUBNUB.bind('keyup', message, function(e) {
     message: message.value
   };
   message.value = '';
-  for (cmd in localCommands) {
-    if (message.value.match("^/"+cmd)) {
-      obj = localCommands[cmd](obj);
-      break;
-    }
+  cmd = obj.message.match(/^\/(\S+)/);
+  if (cmd && localCommands.hasOwnProperty(cmd[1])) {
+    obj = localCommands[cmd[1]](obj);
   }
 
   if (!obj) {
