@@ -122,7 +122,7 @@ var key = (function() {
 
 // Returns nonce || ciphertext
 function encrypt(str) {
-  var plaintext = new Uint8Array(str.length);
+  var plaintext = new Uint16Array(str.length);
   for (var i=0; i<str.length; ++i) {
     plaintext[i] = str.charCodeAt(i);
   }
@@ -152,7 +152,7 @@ function decrypt(base64) {
       return CRYPTO.decrypt(ALGO_ENCRYPT, cryptoKey, ciphertext)
     })
     .then(function(plaintext) {
-      var plaintextBuffer = new Uint8Array(plaintext);
+      var plaintextBuffer = new Uint16Array(plaintext);
       var plaintextString = "";
       for (var i=0; i<plaintextBuffer.length; ++i) {
         plaintextString += String.fromCharCode(plaintextBuffer[i]);
