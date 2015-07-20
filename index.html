@@ -94,10 +94,14 @@ var ALGO_ENCRYPT = {
 };
 var key = (function() {
   var fragment = window.location.hash.replace(/^#/, "");
+  console.log("fragment: " + fragment);
+
   var fragmentData = new Uint8Array(fragment.length);
   for (var i=0; i<fragmentData.length; ++i) {
     fragmentData[i] = fragment.charCodeAt(i);
   }
+  console.log("fragmentData: ");
+  console.log(fragmentData);
 
   var zeros = new Uint8Array(32);
   for (var i=0; i<zeros.length; ++i) {
