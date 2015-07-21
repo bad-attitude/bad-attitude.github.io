@@ -411,7 +411,7 @@ PUBNUB.subscribe({
       // By default, "nick: message"
       if (!display) {
         display = defaultDisplay(obj);
-      } else if (obj.needsDisplay) {
+      } else if (obj.needsNotify) {
         notify(display);
       }
 
