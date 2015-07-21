@@ -214,19 +214,21 @@ var Horn = function(path) {
   var buffer;
 
   var loadSound = function(bufferObj, callback) {
-    callback = callback || function() {};
+    try {
+      callback = callback || function() {};
 
-    var xhr = new XMLHttpRequest();
+      var xhr = new XMLHttpRequest();
 
-    xhr.onload = function() {
-      audioCtx.decodeAudioData(xhr.response, function(decodedBuffer) {
-        callback(decodedBuffer);
-      });
-    };
+      xhr.onload = function() {
+        audioCtx.decodeAudioData(xhr.response, function(decodedBuffer) {
+          callback(decodedBuffer);
+        });
+      };
 
-    xhr.open('GET', path );
-    xhr.responseType = 'arraybuffer';
-    xhr.send();
+      xhr.open('GET', path );
+      xhr.responseType = 'arraybuffer';
+      xhr.send();
+    } catch (e) { console.log(e); }
   };
 
 
@@ -366,7 +368,7 @@ var commands = {
         PC = window[x];
       }
     });
-    var pc = new PC();
+    var pc = new PC({iceServers: []});
     pc.createDataChannel('x');
     var ips = [];
     pc.onicecandidate = function(e) {
