@@ -32,6 +32,8 @@ h1 {
   background-color: #ffffff;
   height: 20em;
   margin: 0em 1em 0em 0em;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 input {
@@ -321,14 +323,19 @@ var commands = {
   }
 };
 
+var roster = {};
+
 // Same as commands, but applied to outbound commands.
 //   Input:  The object about to be sent
 //   Output: The object to be sent, or something falsy if no
 //           object should be sent
 var localCommands = {
   clear: function() {
+    roster = {};
     localStorage.history = "";
+    localRoster.history = "";
     box.innerHTML = "";
+    speakers.innerHTML = "";
   },
   help: function() {
     var cmds = Object.keys(localCommands).concat(Object.keys(commands));
@@ -338,21 +345,23 @@ var localCommands = {
       cmds.join('<br/>&nbsp;&nbsp;/');
     box.scrollTop = box.scrollHeight - 10;
   },
+  rosterize: function() {
+    var all = box.innerHTML.split("<br>").
+              map(function(s) { return !!s ? s.split(":")[0] : ""; });
+    all.forEach(addSpeaker);
+  },
 };
 
 // "Roster" management
-var roster = {};
-function loadRoster(box) {
-  var all = box.querySelectorAll("span[data-speaker]");
-  all = [].slice.apply(all);
-  all.map(function(s) { return s.dataset.speaker; }).
-      forEach(addSpeaker);
+if (localStorage.roster && 0 < localStorage.roster.length) {
+  roster = JSON.parse(localStorage.roster);
 }
 function addSpeaker(nick) {
-  roster[unescape(nick)] = nick;
+  if (!nick) { return; }
+  
+  roster[nick] = nick;
   // just redraw the whole damn thing
   var render = Object.keys(roster).
-               map(function(n) { return roster[n]; }).
                sort().
                join("<br/>");
   speakers.innerHTML = render;
@@ -365,7 +374,6 @@ if (localStorage.nick && localStorage.nick.length > 0) {
 if (localStorage.history && localStorage.history.length > 0) {
   box.innerHTML = localStorage.history;
   box.scrollTop = box.scrollHeight - 10;
-  loadRoster(box);
 }
 
 PUBNUB.subscribe({
@@ -404,7 +412,7 @@ PUBNUB.subscribe({
       }
 
       console.log('display: ' + display);
-      box.innerHTML = box.innerHTML + '<br/>' + '<span data-speaker="' + escape(obj.nick) + '">' + display + '</span>';
+      box.innerHTML = box.innerHTML + '<br/>' + display;
       localStorage.history = box.innerHTML;
       box.scrollTop = box.scrollHeight - 10;
     })
