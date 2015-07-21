@@ -309,6 +309,22 @@ var commands = {
     var command = obj.message.match(/^\/kick\s+(\S+)/);
     if (!command || (command[1] !== nick.value)) { return 0; }
     window.location.href = 'https://en.wikipedia.org/wiki/Kick';
+  },
+
+    // Ping causes everyone to respond "pong"
+  ping: function(obj) {
+    var newObj = { nick: nick.value, message: "pong" };
+    encrypt(JSON.stringify(newObj))
+      .then(function(ciphertext) {
+        console.log("sending (encrypted): "+ ciphertext);
+        PUBNUB.publish({
+          channel: channel,
+          message: ciphertext,
+        });
+      })
+      .catch(function(error) {
+        console.log("encrypt/send error: " + error);
+      });
   }
 };
 
