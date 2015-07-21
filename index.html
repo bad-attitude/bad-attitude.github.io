@@ -304,6 +304,11 @@ var commands = {
     return "<i>" + obj.nick + " (privately)</i>: " + command[2];
   },
 
+  "!msg": function(obj) {
+    var command = obj.message.match(/^\/!msg\s+(\S+)\s+(.*)/);
+    if (!command || (command[1] === nick.value)) { return 0; }
+  },
+
   // Kick, using the totally secure approach of /msg
   kick: function(obj) {
     var command = obj.message.match(/^\/kick\s+(\S+)/);
@@ -406,11 +411,11 @@ PUBNUB.bind('keyup', message, function(e) {
   if (code !== 13) {
     return;
   }
-  
+
   if (message.value === '') {
     return;
   }
-  
+
   if (nick.value === '') {
     nick.style.backgroundColor = '#a33';
     nick.focus();
