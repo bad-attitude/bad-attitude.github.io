@@ -419,9 +419,9 @@ var commands = {
     switch (command) {
       case "start": untz = true; break;
       case "stop": untz = false; break;
-      default: untz = true; break;
+      default: untz = !untz; break;
     }
-    return 0;
+    return "<i>untz <b>" + (untz ? "on" : "off") + "</b></i>";
   },
 };
 
