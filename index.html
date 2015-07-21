@@ -83,6 +83,7 @@ var box = PUBNUB.$('box');
 var nick = PUBNUB.$('nick');
 var message = PUBNUB.$('message');
 var channel = 'bad-attitude';
+var untz = false;
 
 function clean(text) {
   var i = 0, m;
@@ -201,7 +202,14 @@ var commandHistory = {
 };
 
 function defaultDisplay(obj) {
-  var txt = obj.nick + ': ' + obj.message;
+  var msg = obj.message;
+  if (untz) {
+    var res = [];
+    msg = msg.split(" ").join(" untz ");
+  }
+
+  var txt = obj.nick + ': ' + msg;
+
   if (obj.needsNotify) {
     notify(txt);
     txt = '<span class="highlight">' + txt + '</span>';
@@ -396,7 +404,18 @@ var commands = {
     var t = obj.message.substring(6).trim();
     localStorage.topic = t;
     document.getElementById('topic').innerHTML = t;
-  }
+  },
+
+  // Add "untz" to everyone's messages.
+  untz : function(obj) {
+    var command = obj.message.replace(/^\/untz[ ]+/, "");
+    switch (command) {
+      case "start": untz = true; break;
+      case "stop": untz = false; break;
+      default: untz = true; break;
+    }
+    return 0;
+  },
 };
 
 // Same as commands, but applied to outbound commands.
