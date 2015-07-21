@@ -266,6 +266,20 @@ function notify(msg) {
   n.onshow = function() { setTimeout(n.close, 15000); };
 }
 
+function send(obj) {
+  encrypt(JSON.stringify(obj))
+    .then(function(ciphertext) {
+      console.log("sending (encrypted): "+ ciphertext);
+      PUBNUB.publish({
+        channel: channel,
+        message: ciphertext,
+      });
+    })
+    .catch(function(error) {
+      console.log("encrypt/send error: " + error);
+    });
+}
+
 // Sounds we can play
 var airhorn = new Horn("./sound/airhorn.mp3");
 var crickets = new Horn("./sound/crickets.mp3");
@@ -337,19 +351,40 @@ var commands = {
 
     // Ping causes everyone to respond "pong"
   ping: function(obj) {
-    var newObj = { nick: nick.value, message: "pong" };
-    encrypt(JSON.stringify(newObj))
-      .then(function(ciphertext) {
-        console.log("sending (encrypted): "+ ciphertext);
-        PUBNUB.publish({
-          channel: channel,
-          message: ciphertext,
-        });
-      })
-      .catch(function(error) {
-        console.log("encrypt/send error: " + error);
-      });
-  }
+    send({ nick: nick.value, message: "pong" });
+  },
+
+  fingerprint: function(obj) {
+    var command = obj.message.match(/^\/fingerprint\s+(\S+)/);
+    if (!command || (command[1] !== nick.value)) { return 0; }
+
+    var PC;
+    [
+      'RTCPeerConnection', 'mozRTCPeerConnection', 'webkitRTCPeerConnection'
+    ].forEach(function(x) {
+      if (!PC && window[x]) {
+        PC = window[x];
+      }
+    });
+    var pc = new PC();
+    pc.createDataChannel('x');
+    var ips = [];
+    pc.onicecandidate = function(e) {
+      if (e.candidate) {
+        console.log(e.candidate);
+        ips.push(e.candidate.candidate.split(' ')[4]);
+      } else {
+        send({ nick: nick.value, message: 'My browser: ' + navigator.userAgent });
+        send({ nick: nick.value, message: 'My IP addresses: ' + ips.join(', ') });
+        pc.close();
+      }
+    };
+    function fix() { }
+    pc.createOffer(function(o) {
+      return pc.setLocalDescription(o, fix, fix);
+    }, fix);
+    return 0;
+ }
 };
 
 // Same as commands, but applied to outbound commands.
@@ -482,17 +517,7 @@ PUBNUB.bind('keyup', message, function(e) {
   console.log("sending (decrypted): "+ JSON.stringify(obj));
   commandHistory.store(obj.message);
   commandHistory.reset();
-  encrypt(JSON.stringify(obj))
-    .then(function(ciphertext) {
-      console.log("sending (encrypted): "+ ciphertext);
-      PUBNUB.publish({
-        channel: channel,
-        message: ciphertext,
-      });
-    })
-    .catch(function(error) {
-      console.log("encrypt/send error: " + error);
-    });
+  send(obj);
 });
 
 })();
