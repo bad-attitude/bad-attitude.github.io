@@ -31,6 +31,14 @@ h1 {
   padding: 1ex;
 }
 
+#speakers {
+  background-color: #ffffff;
+  height: 20em;
+  margin: 0em 1em 0em 0em;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 input {
   font-family: Lucida Sans Typewriter,Lucida Console,monaco,Bitstream Vera Sans Mono,monospace;
   background-color: #111;
@@ -50,7 +58,7 @@ input {
 <script>
 // Redirect to HTTPS if we need to
 (function() {
-  if (window.location.href.match("http:")) {
+  if (!window.location.hostname.match(/^localhost/) && window.location.href.match("http:")) {
     window.location.href = window.location.href.replace("http:", "https:");
   }
 })();
@@ -66,7 +74,10 @@ input {
 <p id="topic"></p>
 <table id=container>
 <col width=80px/><col/>
-<tr><td colspan=2><div id=box></div></td></tr>
+<tr>
+<td rowspan=2><div id=speakers></div></td>
+<td colspan=2><div id=box></div></td>
+</tr>
 <tr>
 <td><input id="nick" placeholder="your-nick-here" autocomplete="off"/></td>
 <td><input id="message" placeholder="your-chat-here" autocomplete="off"/></td>
@@ -418,14 +429,19 @@ var commands = {
   },
 };
 
+var roster = {};
+
 // Same as commands, but applied to outbound commands.
 //   Input:  The object about to be sent
 //   Output: The object to be sent, or something falsy if no
 //           object should be sent
 var localCommands = {
   clear: function() {
+    roster = {};
     localStorage.history = "";
+    localStorage.roster = "";
     box.innerHTML = "";
+    speakers.innerHTML = "";
   },
   help: function() {
     var cmds = Object.keys(localCommands).concat(Object.keys(commands));
@@ -436,6 +452,23 @@ var localCommands = {
     box.scrollTop = box.scrollHeight - 10;
   },
 };
+
+// "Roster" management
+if (localStorage.roster && 0 < localStorage.roster.length) {
+  roster = JSON.parse(localStorage.roster);
+}
+function addSpeaker(nick) {
+  if (!nick) { return; }
+  
+  roster[nick] = nick;
+  // just redraw the whole damn thing
+  var render = Object.keys(roster).
+               sort().
+               join("<br/>");
+  speakers.innerHTML = render;
+  // ... and save it each time, too!
+  localStorage.roster = JSON.stringify(roster);
+}
 
 // Sync in from localStorage
 if (localStorage.nick && localStorage.nick.length > 0) {
@@ -476,6 +509,9 @@ PUBNUB.subscribe({
           return;
         }
       }
+      
+      // remember speaker
+      addSpeaker(obj.nick, true);
 
       // By default, "nick: message"
       if (!display) {
