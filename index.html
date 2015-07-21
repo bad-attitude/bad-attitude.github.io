@@ -39,6 +39,9 @@ input {
   height: 20em;
   overflow: scroll;
 }
+.highlight {
+  color: #fff;
+}
 
 </style>
 <script>
@@ -194,7 +197,12 @@ var commandHistory = {
 };
 
 function defaultDisplay(obj) {
-  return obj.nick + ': ' + obj.message;
+  var txt = obj.nick + ': ' + obj.message;
+  if (obj.needsNotify) {
+    notify(txt);
+    txt = '<span class="highlight">' + txt + '</span>';
+  }
+  return txt;
 }
 
 // Adapted from https://airhorner.com/scripts/main.min.js
@@ -247,6 +255,16 @@ var Horn = function(path) {
 
   init();
 };
+
+function notify(msg) {
+  if (Notification.permission !== 'granted') {
+    return;
+  }
+
+  var n = new Notification("bad-attitude", { body: msg, tag: 'message' });
+  n.onclick = function() { window.focus(); n.close(); };
+  n.onshow = function() { setTimeout(n.close, 15000); };
+}
 
 // Sounds we can play
 var airhorn = new Horn("./sound/airhorn.mp3");
@@ -301,6 +319,7 @@ var commands = {
   msg: function(obj) {
     var command = obj.message.match(/^\/msg\s+(\S+)\s+(.*)/);
     if (!command || (command[1] !== nick.value)) { return 0; }
+    obj.needsNotify = true;
     return "<i>" + obj.nick + " (privately)</i>: " + command[2];
   },
 
@@ -380,6 +399,7 @@ PUBNUB.subscribe({
 
       // If there's a command, let it produce the message
       var display = null;
+      obj.needsNotify = new RegExp("\\b" + nick.value.trim() + "\\b").test(obj.message);
       cmd = obj.message.match(/^\/(\S+)/);
       if (cmd && commands.hasOwnProperty(cmd[1])) {
         display = commands[cmd[1]](obj);
@@ -391,6 +411,8 @@ PUBNUB.subscribe({
       // By default, "nick: message"
       if (!display) {
         display = defaultDisplay(obj);
+      } else if (obj.needsNotify) {
+        notify(display);
       }
 
       console.log('display: ' + display);
@@ -399,7 +421,7 @@ PUBNUB.subscribe({
       box.scrollTop = box.scrollHeight - 10;
     })
     .catch(function(error) {
-      console.log("receive/decrypt error: " + error);
+      console.log("receive/decrypt error", error);
     });
   }
 });
@@ -427,6 +449,8 @@ PUBNUB.bind('keyup', message, function(e) {
   if (code !== 13) {
     return;
   }
+
+  Notification.requestPermission();
 
   if (message.value === '') {
     return;
