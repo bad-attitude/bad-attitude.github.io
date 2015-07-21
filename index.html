@@ -333,7 +333,7 @@ var localCommands = {
   clear: function() {
     roster = {};
     localStorage.history = "";
-    localRoster.history = "";
+    localStorage.roster = "";
     box.innerHTML = "";
     speakers.innerHTML = "";
   },
@@ -365,6 +365,8 @@ function addSpeaker(nick) {
                sort().
                join("<br/>");
   speakers.innerHTML = render;
+  // ... and save it each time, too!
+  localStorage.roster = JSON.stringify(roster);
 }
 
 // Sync in from localStorage
