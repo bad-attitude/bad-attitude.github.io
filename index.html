@@ -346,9 +346,16 @@ var commands = {
   // to everyone, and all of the non-targets ignore it.
   msg: function(obj) {
     var command = obj.message.match(/^\/msg\s+(\S+)\s+(.*)/);
-    if (!command || (command[1] !== nick.value)) { return 0; }
-    obj.needsNotify = true;
-    return "<i>" + obj.nick + " (privately)</i>: " + command[2];
+    if (!command) { return 0; }
+
+    if (command[1] === nick.value) {
+      obj.needsNotify = true;
+      return "<i>" + obj.nick + " (privately)</i>: " + command[2];
+    }
+    if (obj.nick === nick.value) {
+      return "<i>to " + command[1] + " (privately)</i>: " + command[2];
+    }
+    return 0;
   },
 
   "!msg": function(obj) {
