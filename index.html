@@ -28,6 +28,12 @@ h1 {
   padding: 1ex;
 }
 
+#speakers {
+  background-color: #ffffff;
+  height: 20em;
+  margin: 0em 1em 0em 0em;
+}
+
 input {
   font-family: Lucida Sans Typewriter,Lucida Console,monaco,Bitstream Vera Sans Mono,monospace;
   background-color: #111;
@@ -44,7 +50,7 @@ input {
 <script>
 // Redirect to HTTPS if we need to
 (function() {
-  if (window.location.href.match("http:")) {
+  if (!window.location.hostname.match(/^localhost/) && window.location.href.match("http:")) {
     window.location.href = window.location.href.replace("http:", "https:");
   }
 })();
@@ -59,7 +65,10 @@ input {
 <h1>bad-attitude</h1>
 <table id=container>
 <col width=80px/><col/>
-<tr><td colspan=2><div id=box></div></td></tr>
+<tr>
+<td rowspan=2><div id=speakers></div></td>
+<td colspan=2><div id=box></div></td>
+</tr>
 <tr>
 <td><input id="nick" placeholder="your-nick-here" /></td>
 <td><input id="message" placeholder="your-chat-here" /></td>
@@ -331,6 +340,24 @@ var localCommands = {
   },
 };
 
+// "Roster" management
+var roster = {};
+function loadRoster(box) {
+  var all = box.querySelectorAll("span[data-speaker]");
+  all = [].slice.apply(all);
+  all.map(function(s) { return s.dataset.speaker; }).
+      forEach(addSpeaker);
+}
+function addSpeaker(nick) {
+  roster[unescape(nick)] = nick;
+  // just redraw the whole damn thing
+  var render = Object.keys(roster).
+               map(function(n) { return roster[n]; }).
+               sort().
+               join("<br/>");
+  speakers.innerHTML = render;
+}
+
 // Sync in from localStorage
 if (localStorage.nick && localStorage.nick.length > 0) {
   nick.value = localStorage.nick;
@@ -338,6 +365,7 @@ if (localStorage.nick && localStorage.nick.length > 0) {
 if (localStorage.history && localStorage.history.length > 0) {
   box.innerHTML = localStorage.history;
   box.scrollTop = box.scrollHeight - 10;
+  loadRoster(box);
 }
 
 PUBNUB.subscribe({
@@ -366,6 +394,9 @@ PUBNUB.subscribe({
           return;
         }
       }
+      
+      // remember speaker
+      addSpeaker(obj.nick, true);
 
       // By default, "nick: message"
       if (!display) {
@@ -373,7 +404,7 @@ PUBNUB.subscribe({
       }
 
       console.log('display: ' + display);
-      box.innerHTML = box.innerHTML + '<br/>' + display;
+      box.innerHTML = box.innerHTML + '<br/>' + '<span data-speaker="' + escape(obj.nick) + '">' + display + '</span>';
       localStorage.history = box.innerHTML;
       box.scrollTop = box.scrollHeight - 10;
     })
