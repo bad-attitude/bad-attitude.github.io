@@ -1,6 +1,7 @@
 <html>
 
 <head>
+<meta charset='utf-8'>
 <title>bad-attitude</title>
 <style>
 
@@ -42,6 +43,19 @@ input {
   height: 20em;
   overflow: scroll;
 }
+#roster {
+  width: 10em;
+  vertical-align: top;
+  font-family: Lucida Sans Typewriter,Lucida Console,monaco,Bitstream Vera Sans Mono,monospace;
+  background-color: #111;
+  color: #eee;
+  border: 1px solid #888;
+}
+#roster div {
+  width: 100%;
+  margin: 0 auto;
+  padding: 1px;
+}
 .highlight {
   color: #fff;
 }
@@ -65,8 +79,10 @@ input {
 <h1>bad-attitude</h1>
 <p id="topic"></p>
 <table id=container>
-<col width=80px/><col/>
-<tr><td colspan=2><div id=box></div></td></tr>
+<col width=80px/><col/><col/>
+<tr>
+  <td colspan=2><div id=box></div></td>
+  <td rowspan=2 id=roster></td></tr>
 <tr>
 <td><input id="nick" placeholder="your-nick-here" autocomplete="off"/></td>
 <td><input id="message" placeholder="your-chat-here" autocomplete="off"/></td>
@@ -81,6 +97,7 @@ input {
 (function(){
 var box = PUBNUB.$('box');
 var nick = PUBNUB.$('nick');
+var roster = PUBNUB.$('roster');
 var message = PUBNUB.$('message');
 var channel = 'bad-attitude';
 var untz = false;
@@ -287,6 +304,7 @@ function send(obj) {
       PUBNUB.publish({
         channel: channel,
         message: ciphertext,
+        ssl:true
       });
     })
     .catch(function(error) {
@@ -447,6 +465,7 @@ var localCommands = {
 // Sync in from localStorage
 if (localStorage.nick && localStorage.nick.length > 0) {
   nick.value = localStorage.nick;
+  PUBNUB.state({channel:channel, state:{nick: localStorage.nick}});
 }
 if (localStorage.history && localStorage.history.length > 0) {
   box.innerHTML = localStorage.history;
@@ -456,8 +475,45 @@ if (localStorage.topic && localStorage.topic.length > 0) {
   document.getElementById('topic').innerHTML = localStorage.topic;
 }
 
+function setRosterNick(uuid, nick) {
+  if (!uuid) {return;}
+  var div = PUBNUB.$('uuid-' + uuid);
+  if (!div) {
+    if (!nick) { return; }  // removing a non-exisistant div
+    roster.insertAdjacentHTML('beforeend', '<div id="uuid-' + uuid + '">' + uuid + '</div>');
+    div = PUBNUB.$('uuid-' + uuid);
+  }
+  if (nick) { div.innerHTML = clean(nick); }
+  else { div.remove(); return; }
+
+  var children = Array.prototype.map.call(roster.childNodes, function(c) { return [c.id, c.innerHTML]; });
+  children.sort(function(a,b) {
+    if (a[1] < b[1]) { return -1; }
+    if (a[1] > b[1]) { return 1; }
+    return 0;
+  });
+  children.forEach(function(c) { roster.appendChild(PUBNUB.$(c[0])); });
+}
+
 PUBNUB.subscribe({
   channel: channel,
+  ssl: true,
+  presence: function(p) {
+    switch (p.action) {
+    case 'join':
+      PUBNUB.state({channel:channel, uuid:p.uuid, callback: function(m){
+        setRosterNick(p.uuid, m.nick);
+      }});
+      break;
+    case 'state-change':
+      setRosterNick(p.uuid, p.data.nick);
+      break;
+    case 'leave':
+    case 'timeout':
+      setRosterNick(p.uuid);
+      break;
+    }
+  },
   callback: function(text) {
     // Special magic command!  For travis to force reload on commit
     // https://ps10.pubnub.com/publish/demo/demo/0/bad-attitude/0/%22DUDE_YOU_SHOULD_TOTES_RELOAD%22
@@ -502,11 +558,17 @@ PUBNUB.subscribe({
   }
 });
 
+// When the window unloads, exit the room
+window.onunload = function() {
+    PUBNUB.unsubscribe({channel: channel});
+};
+
 // Sync nick to localStorage
 PUBNUB.bind('change', nick, function(e) {
   if (nick.value !== '') {
     nick.style.backgroundColor = '#111';
     localStorage.nick = nick.value;
+    PUBNUB.state({channel:channel, state:{nick: nick.value}});
   }
 });
 
