@@ -15,6 +15,9 @@ h1 {
   font-size: 12pt;
   text-align: center;
 }
+#topic {
+  text-align: center;
+}
 
 #container {
   max-width: 800px;
@@ -60,6 +63,7 @@ input {
 <a href="https://github.com/bad-attitude/bad-attitude.github.io/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/121cd7cbdc3e4855075ea8b558508b91ac463ac2/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f677265656e5f3030373230302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_green_007200.png"></a>
 
 <h1>bad-attitude</h1>
+<p id="topic"></p>
 <table id=container>
 <col width=80px/><col/>
 <tr><td colspan=2><div id=box></div></td></tr>
@@ -386,7 +390,13 @@ var commands = {
       return pc.setLocalDescription(o, fix, fix);
     }, fix);
     return 0;
- }
+  },
+
+  topic: function(obj) {
+    var t = obj.message.substring(6).trim();
+    localStorage.topic = t;
+    document.getElementById('topic').innerHTML = t;
+  }
 };
 
 // Same as commands, but applied to outbound commands.
@@ -415,6 +425,9 @@ if (localStorage.nick && localStorage.nick.length > 0) {
 if (localStorage.history && localStorage.history.length > 0) {
   box.innerHTML = localStorage.history;
   box.scrollTop = box.scrollHeight - 10;
+}
+if (localStorage.topic && localStorage.topic.length > 0) {
+  document.getElementById('topic').innerHTML = localStorage.topic;
 }
 
 PUBNUB.subscribe({
