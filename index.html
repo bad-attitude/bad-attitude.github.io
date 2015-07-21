@@ -345,11 +345,6 @@ var localCommands = {
       cmds.join('<br/>&nbsp;&nbsp;/');
     box.scrollTop = box.scrollHeight - 10;
   },
-  rosterize: function() {
-    var all = box.innerHTML.split("<br>").
-              map(function(s) { return !!s ? s.split(":")[0] : ""; });
-    all.forEach(addSpeaker);
-  },
 };
 
 // "Roster" management
