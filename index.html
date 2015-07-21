@@ -561,7 +561,7 @@ PUBNUB.subscribe({
 // When the window unloads, exit the room
 window.onunload = function() {
     PUBNUB.unsubscribe({channel: channel});
-});
+};
 
 // Sync nick to localStorage
 PUBNUB.bind('change', nick, function(e) {
