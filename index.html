@@ -63,6 +63,12 @@ input {
   color: red;
   font-style: italic;
 }
+.nick {
+  color: #fee;
+}
+.boxline {
+  padding-top: 3px;
+}
 
 </style>
 <script>
@@ -235,7 +241,7 @@ function defaultDisplay(obj) {
     msg = msg.split(" ").join(" untz ");
   }
 
-  var txt = obj.nick + ': ' + msg;
+  var txt = '<span class="nick">' + obj.nick + '</span>: ' + msg;
 
   if (obj.needsNotify) {
     notify(txt);
@@ -308,7 +314,7 @@ function notify(msg) {
 }
 
 function boxate(html) {
-  box.insertAdjacentHTML('beforeend', '<div>' + html + '</div>');
+  box.insertAdjacentHTML('beforeend', '<div class=boxline>' + html + '</div>');
   box.scrollTop = box.scrollHeight - 10;
   localStorage.history = box.innerHTML;
 }
