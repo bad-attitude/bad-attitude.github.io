@@ -86,8 +86,9 @@ input {
 <!-- "Fork me on Github" banner -->
 <a href="https://github.com/bad-attitude/bad-attitude.github.io/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/121cd7cbdc3e4855075ea8b558508b91ac463ac2/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f677265656e5f3030373230302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_green_007200.png"></a>
 
+<div id=fsc>
 <h1>bad-attitude</h1>
-<p id="topic"></p>
+<p id=topic></p>
 <table id=container>
 <col width=80px/><col/><col/>
 <tr>
@@ -98,7 +99,7 @@ input {
 <td><input id="message" placeholder="your-chat-here" autocomplete="off"/></td>
 </tr>
 </table>
-
+</div>
 
 <script src=https://cdn.pubnub.com/pubnub.min.js></script>
 <script>
@@ -112,6 +113,7 @@ var message = PUBNUB.$('message');
 var etopic = PUBNUB.$('topic');
 var channel = 'bad-attitude';
 var untz = false;
+var requestFullScreen = false;
 var cons = {};
 
 var ROOM = 'ROOM';
@@ -495,6 +497,11 @@ var localCommands = {
     }});
   },
 
+  fullscreen: function(obj) {
+    requestFullScreen = true;
+    return "";
+  },
+
   // emoticons
   emote: function(obj) {
     var command = obj.message.replace(/^\/emote\s*/, "");
@@ -663,6 +670,16 @@ PUBNUB.bind('change', nick, function(e) {
 });
 
 PUBNUB.bind('keyup', message, function(e) {
+  Notification.requestPermission();
+  if (requestFullScreen) {
+    requestFullScreen = false;
+    var fsc = document.getElementById('fsc');
+    // fucking vendor prefixes
+    if (fsc.requestFullScreen) fsc.requestFullScreen();
+    else if (fsc.mozRequestFullScreen) fsc.mozRequestFullScreen();
+    else if (fsc.webkitRequestFullScreen) fsc.webkitRequestFullScreen();
+  }
+
   var code = (e.keyCode || e.charCode);
 
   if (code === 38) { // Up arrow
@@ -677,8 +694,6 @@ PUBNUB.bind('keyup', message, function(e) {
   if (code !== 13) {
     return;
   }
-
-  Notification.requestPermission();
 
   if (message.value === '') {
     return;
