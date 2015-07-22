@@ -559,7 +559,10 @@ function setRosterNick(uuid, knick) {
       return 0;
     });
     children.forEach(function(c) { roster.appendChild(PUBNUB.$(c[0])); });
-  });
+  })
+  .catch(function(error) {
+    console.log("knick receive/decrypt error", error);
+  });;
 }
 
 PUBNUB.subscribe({
