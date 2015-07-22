@@ -533,7 +533,7 @@ var localCommands = {
 // Sync in from localStorage
 if (localStorage.nick && localStorage.nick.length > 0) {
   nick.value = localStorage.nick;
-  //sendPresence();
+  sendPresence();
 }
 if (localStorage.history && localStorage.history.length > 0) {
   box.innerHTML = localStorage.history;
@@ -542,27 +542,33 @@ if (localStorage.history && localStorage.history.length > 0) {
 
 function setRosterNick(uuid, knick) {
   if (!uuid) {return;}
-  decrypt(knick).then(function(nick) {
     var div = PUBNUB.$('uuid-' + uuid);
-    if (!div) {
-      if (!nick) { return; }  // removing a non-exisistant div
-      roster.insertAdjacentHTML('beforeend', '<div id="uuid-' + uuid + '">' + uuid + '</div>');
-      div = PUBNUB.$('uuid-' + uuid);
-    }
-    if (nick) { div.innerHTML = clean(nick); }
-    else { div.remove(); return; }
+    if (knick) {
+      decrypt(knick).then(function(nick) {
+        if (div) {
+          div.innerHTML = clean(nick);
+        } else {
+          roster.insertAdjacentHTML('beforeend',
+            '<div id="uuid-' + uuid + '">' + clean(nick) + '</div>');
+        }
 
-    var children = Array.prototype.map.call(roster.childNodes, function(c) { return [c.id, c.innerHTML]; });
-    children.sort(function(a,b) {
-      if (a[1] < b[1]) { return -1; }
-      if (a[1] > b[1]) { return 1; }
-      return 0;
-    });
-    children.forEach(function(c) { roster.appendChild(PUBNUB.$(c[0])); });
-  })
-  .catch(function(error) {
-    console.log("knick receive/decrypt error", error);
-  });;
+        var children = Array.prototype.map.call(roster.childNodes, function(c) { return [c.id, c.innerHTML]; });
+        children.sort(function(a,b) {
+          if (a[1] < b[1]) { return -1; }
+          if (a[1] > b[1]) { return 1; }
+          return 0;
+        });
+        children.forEach(function(c) { roster.appendChild(PUBNUB.$(c[0])); });
+      })
+      .catch(function(error) {
+        console.log("knick receive/decrypt error", error);
+      });
+    }
+    else {
+      if (div) {
+        div.remove();
+      }
+    }
 }
 
 PUBNUB.subscribe({
