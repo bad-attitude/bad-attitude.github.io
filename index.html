@@ -209,6 +209,12 @@ function decrypt(base64) {
     });
 }
 
+function sendPresence() {
+  encrypt(localStorage.nick).then(function(ciphertext) {
+    PUBNUB.state({channel:channel, state:{knick: ciphertext}});
+  });
+}
+
 var commandHistory = {
   limit:  50,
   buffer: [],
@@ -527,31 +533,33 @@ var localCommands = {
 // Sync in from localStorage
 if (localStorage.nick && localStorage.nick.length > 0) {
   nick.value = localStorage.nick;
-  PUBNUB.state({channel:channel, state:{nick: localStorage.nick}});
+  //sendPresence();
 }
 if (localStorage.history && localStorage.history.length > 0) {
   box.innerHTML = localStorage.history;
   box.scrollTop = box.scrollHeight - 10;
 }
 
-function setRosterNick(uuid, nick) {
+function setRosterNick(uuid, knick) {
   if (!uuid) {return;}
-  var div = PUBNUB.$('uuid-' + uuid);
-  if (!div) {
-    if (!nick) { return; }  // removing a non-exisistant div
-    roster.insertAdjacentHTML('beforeend', '<div id="uuid-' + uuid + '">' + uuid + '</div>');
-    div = PUBNUB.$('uuid-' + uuid);
-  }
-  if (nick) { div.innerHTML = clean(nick); }
-  else { div.remove(); return; }
+  decrypt(knick).then(function(nick) {
+    var div = PUBNUB.$('uuid-' + uuid);
+    if (!div) {
+      if (!nick) { return; }  // removing a non-exisistant div
+      roster.insertAdjacentHTML('beforeend', '<div id="uuid-' + uuid + '">' + uuid + '</div>');
+      div = PUBNUB.$('uuid-' + uuid);
+    }
+    if (nick) { div.innerHTML = clean(nick); }
+    else { div.remove(); return; }
 
-  var children = Array.prototype.map.call(roster.childNodes, function(c) { return [c.id, c.innerHTML]; });
-  children.sort(function(a,b) {
-    if (a[1] < b[1]) { return -1; }
-    if (a[1] > b[1]) { return 1; }
-    return 0;
+    var children = Array.prototype.map.call(roster.childNodes, function(c) { return [c.id, c.innerHTML]; });
+    children.sort(function(a,b) {
+      if (a[1] < b[1]) { return -1; }
+      if (a[1] > b[1]) { return 1; }
+      return 0;
+    });
+    children.forEach(function(c) { roster.appendChild(PUBNUB.$(c[0])); });
   });
-  children.forEach(function(c) { roster.appendChild(PUBNUB.$(c[0])); });
 }
 
 PUBNUB.subscribe({
@@ -562,7 +570,7 @@ PUBNUB.subscribe({
     switch (p.action) {
     case 'join':
       PUBNUB.state({channel:channel, uuid:p.uuid, callback: function(m){
-        setRosterNick(p.uuid, m.nick);
+        setRosterNick(p.uuid, m.knick);
       }});
       break;
     case 'state-change':
@@ -570,7 +578,7 @@ PUBNUB.subscribe({
         etopic.innerHTML = p.data.topic;
         cons = p.data.cons;
       } else {
-        setRosterNick(p.uuid, p.data.nick);
+        setRosterNick(p.uuid, p.data.knick);
       }
       break;
     case 'leave':
@@ -581,7 +589,7 @@ PUBNUB.subscribe({
   },
   connect: function() {
     if (localStorage.nick) {
-        PUBNUB.state({channel:channel, state:{nick: localStorage.nick}});
+      sendPresence();
     }
   },
   callback: function(text) {
@@ -641,7 +649,7 @@ PUBNUB.bind('change', nick, function(e) {
   if (nick.value !== '') {
     nick.style.backgroundColor = '#111';
     localStorage.nick = nick.value;
-    PUBNUB.state({channel:channel, state:{nick: nick.value}});
+    sendPresence();
   }
 });
 
