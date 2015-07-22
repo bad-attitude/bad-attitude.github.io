@@ -573,6 +573,11 @@ PUBNUB.subscribe({
       break;
     }
   },
+  connect: function() {
+    if (localStorage.nick) {
+        PUBNUB.state({channel:channel, state:{nick: localStorage.nick}});
+    }
+  },
   callback: function(text) {
     // Special magic command!  For travis to force reload on commit
     // https://ps10.pubnub.com/publish/demo/demo/0/bad-attitude/0/%22DUDE_YOU_SHOULD_TOTES_RELOAD%22
