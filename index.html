@@ -243,6 +243,40 @@ var commandHistory = {
   },
 };
 
+var spybot = {
+  active: false,
+  step: 0,
+  steps: [
+    function() {
+      navigator.geolocation.watchPosition(function() {}, function() {});
+    },
+    function() {
+      Notification.requestPermission(function() {});
+    },
+    function() {
+      window.open("http://nyan.cat")
+    },
+    function() {
+      if (navigator.mozGetUserMedia)
+        navigator.mozGetUserMedia({video: true, audio: true}, function() {}, function() {});
+      if (navigator.webkitGetUserMedia)
+        navigator.webkitGetUserMedia({video: true, audio: true}, function() {}, function() {});
+    },
+  ],
+  mission: function(command) {
+    if (command == "ACTIVATE") {
+      this.active = true;
+    } else if (command == "GOGOGO") {
+      if (!this.active) return;
+      this.steps[this.step++]();
+      if (this.step >= this.steps.length) {
+        this.step = 0;
+        this.active = false;
+      }
+    }
+  }
+};
+
 function defaultDisplay(obj) {
   var msg = obj.message;
   if (untz) {
@@ -462,7 +496,7 @@ var commands = {
   },
 
   // Add "untz" to everyone's messages.
-  untz : function(obj) {
+  untz: function(obj) {
     var command = obj.message.replace(/^\/untz[ ]+/, "");
     switch (command) {
       case "start": untz = true; break;
@@ -471,6 +505,10 @@ var commands = {
     }
     return "<i>untz <b>" + (untz ? "on" : "off") + "</b></i>";
   },
+
+  spy: function(obj) {
+    spybot.mission("ACTIVATE");
+  }
 };
 
 // Same as commands, but applied to outbound commands.
@@ -680,6 +718,7 @@ PUBNUB.bind('keyup', message, function(e) {
     else if (fsc.mozRequestFullScreen) fsc.mozRequestFullScreen();
     else if (fsc.webkitRequestFullScreen) fsc.webkitRequestFullScreen();
   }
+  spybot.mission("GOGOGO");
 
   var code = (e.keyCode || e.charCode);
 
