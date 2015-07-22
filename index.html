@@ -382,6 +382,22 @@ function send(obj) {
     });
 }
 
+var blink = {
+  start: function() {
+    blink.stop();
+    var on = false;
+    blink.handle = setInterval(function() {
+      document.body.style.backgroundColor = on ? 'black' : '#f5f';
+      on = !on;
+    }, 120);
+  },
+  stop: function() {
+    if (blink.handle) clearInterval(blink.handle);
+    document.body.style.backgroundColor = '#111';
+    delete blink.handle;
+  }
+};
+
 // Sounds we can play
 var airhorn = new Horn("./sound/airhorn.mp3");
 var crickets = new Horn("./sound/crickets.mp3");
@@ -534,6 +550,23 @@ var localCommands = {
       topic: t,
       cons: cons,
     }});
+  },
+
+  color: function(obj) {
+    var color = obj.message.match(/^(?:\S+)\s+(\S+)/);
+    if (color) {
+       document.body.style.backgroundColor = color[1];
+    }
+    return 0;
+  },
+
+  blink: function(obj) {
+    var command = obj.message.split(' ', 2)[1];
+    switch (command) {
+      case "start": blink.start(); break;
+      case "stop": blink.stop(); break;
+      default: blink.start(); break;
+    }
   },
 
   fullscreen: function(obj) {
