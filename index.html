@@ -386,12 +386,13 @@ var blink = {
     blink.stop();
     var on = false;
     blink.handle = setInterval(function() {
-      document.body.style.backgroundColor = on ? 'black' : 'white';
+      document.body.style.backgroundColor = on ? 'black' : '#f5f';
       on = !on;
     }, 120);
   },
   stop: function() {
     if (blink.handle) clearInterval(blink.handle);
+    document.body.style.backgroundColor = '#111';
     delete blink.handle;
   }
 };
