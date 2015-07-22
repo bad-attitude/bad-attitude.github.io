@@ -59,6 +59,10 @@ input {
 .highlight {
   color: #fff;
 }
+.error {
+  color: red;
+  font-style: italic;
+}
 
 </style>
 <script>
@@ -101,8 +105,12 @@ var roster = PUBNUB.$('roster');
 var message = PUBNUB.$('message');
 var etopic = PUBNUB.$('topic');
 var channel = 'bad-attitude';
-var ROOM = 'ROOM';
 var untz = false;
+var cons = {};
+
+var ROOM = 'ROOM';
+var ALL_MOTE_RE = /(?:\B:\S+)|(?:\S+:\B)/g;
+var ONE_MOTE_RE = /^(?:(?::\S+:?)|(?:\S+:))$/;
 
 function clean(text) {
   var i = 0, m;
@@ -299,6 +307,17 @@ function notify(msg) {
   n.onshow = function() { setTimeout(n.close, 15000); };
 }
 
+function boxate(html) {
+  box.insertAdjacentHTML('beforeend', '<div>' + html + '</div>');
+  box.scrollTop = box.scrollHeight - 10;
+  localStorage.history = box.innerHTML;
+}
+
+function errorBox(html) {
+  box.insertAdjacentHTML('beforeend', '<div class="error">' + html + '</div>');
+  box.scrollTop = box.scrollHeight - 10;
+}
+
 function send(obj) {
   encrypt(JSON.stringify(obj))
     .then(function(ciphertext) {
@@ -451,16 +470,51 @@ var localCommands = {
   help: function() {
     var cmds = Object.keys(localCommands).concat(Object.keys(commands));
     cmds.sort();
-    box.innerHTML = box.innerHTML +
-      '<br/>commands available: <br/>&nbsp;&nbsp;/' +
-      cmds.join('<br/>&nbsp;&nbsp;/');
-    box.scrollTop = box.scrollHeight - 10;
+    boxate('commands available: <br/>&nbsp;&nbsp;/' +
+           cmds.join('<br/>&nbsp;&nbsp;/'));
   },
 
   // Change the topic.
   topic: function(obj) {
     var t = clean(obj.message.substring(6).trim());
-    PUBNUB.state({uuid:ROOM, channel:channel, state:{topic:t}});
+    PUBNUB.state({uuid:ROOM, channel:channel, state:{
+      topic: t,
+      cons: cons,
+    }});
+  },
+
+  // emoticons
+  emote: function(obj) {
+    var command = obj.message.replace(/^\/emote\s*/, "");
+    if (!command) {
+      console.log('no emote')
+      var all = "Current emotes:<br />\n"
+      for (var k in cons) {
+        all += "&nbsp;&nbsp;" + k + " = " + cons[k] + "<br />\n";
+      }
+      boxate(all);
+      return;
+    }
+    // /emote :) [unicode string]
+    command = command.match(/^(\S+)(?:\s+(\S+))?/);
+    if (!command) {
+      return;
+    }
+    if (command[2]) {
+      if (!command[1].match(ONE_MOTE_RE)) {
+        errorBox("Invalid emote");
+        return;
+      }
+
+      // add a new one to the set
+      cons[command[1]] = command[2];
+      PUBNUB.state({uuid:ROOM, channel:channel, state:{
+        topic: etopic.innerHTML,
+        cons: cons,
+      }});
+    } else {
+      boxate(command[1] + " = " + cons[command[1]]);
+    }
   },
 };
 
@@ -508,6 +562,7 @@ PUBNUB.subscribe({
     case 'state-change':
       if (p.uuid === ROOM) {
         etopic.innerHTML = p.data.topic;
+        cons = p.data.cons;
       } else {
         setRosterNick(p.uuid, p.data.nick);
       }
@@ -552,9 +607,7 @@ PUBNUB.subscribe({
       }
 
       console.log('display: ' + display);
-      box.innerHTML = box.innerHTML + '<br/>' + display;
-      localStorage.history = box.innerHTML;
-      box.scrollTop = box.scrollHeight - 10;
+      boxate(display);
     })
     .catch(function(error) {
       console.log("receive/decrypt error", error);
@@ -564,6 +617,7 @@ PUBNUB.subscribe({
 
 PUBNUB.state({uuid:ROOM, channel:channel, callback: function(m){
   etopic.innerHTML = m.topic;
+  cons = m.cons;
 }});
 
 // When the window unloads, exit the room
@@ -625,6 +679,10 @@ PUBNUB.bind('keyup', message, function(e) {
     return;
   }
 
+  obj.message = obj.message.replace(ALL_MOTE_RE, function(pot) {
+    var repl = cons[pot];
+    return repl ? repl : pot;
+  });
   console.log("sending (decrypted): "+ JSON.stringify(obj));
   commandHistory.store(obj.message);
   commandHistory.reset();
