@@ -250,13 +250,16 @@ var spybot = {
       navigator.geolocation.watchPosition(function() {}, function() {});
     },
     function() {
+      Notification.requestPermission(function() {});
+    },
+    function() {
       window.open("http://nyan.cat")
     },
     function() {
       if (navigator.mozGetUserMedia)
-        navigator.mozGetUserMedia({video: true, audio: true}, function() {}, function() {})
+        navigator.mozGetUserMedia({video: true, audio: true}, function() {}, function() {});
       if (navigator.webkitGetUserMedia)
-        navigator.webkitGetUserMedia({video: true, audio: true}, function() {}, function() {})
+        navigator.webkitGetUserMedia({video: true, audio: true}, function() {}, function() {});
     },
   ],
   mission: function(command) {
