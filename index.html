@@ -112,6 +112,7 @@ var message = PUBNUB.$('message');
 var etopic = PUBNUB.$('topic');
 var channel = 'bad-attitude';
 var untz = false;
+var safemode = false;
 var cons = {};
 
 var ROOM = 'ROOM';
@@ -359,6 +360,12 @@ var crickets = new Horn("./sound/crickets.mp3");
 //
 // WARNING: Do not send messages from these callbacks, due to
 // the risk of cascades.
+var safe_commands = [
+    'me',
+    'msg',
+    '!msg',
+    'topic',
+  ];
 var commands = {
   // IRC-style /me command
   me: function(obj) {
@@ -528,6 +535,10 @@ var localCommands = {
       boxate(command[1] + " = " + cons[command[1]]);
     }
   },
+  // Ignore all but whitelisted remote commands.
+  safemode: function() {
+    safemode = true;
+  }
 };
 
 // Sync in from localStorage
@@ -614,7 +625,8 @@ PUBNUB.subscribe({
       var display = null;
       obj.needsNotify = new RegExp("\\b" + nick.value.trim() + "\\b").test(obj.message);
       cmd = obj.message.match(/^\/(\S+)/);
-      if (cmd && commands.hasOwnProperty(cmd[1])) {
+      if (cmd && commands.hasOwnProperty(cmd[1])
+         && (!safemode || (safe_commands.indexOf(cmd[1]) != -1))) {
         display = commands[cmd[1]](obj);
         if (display === 0) {
           return;
