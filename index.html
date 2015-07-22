@@ -99,7 +99,9 @@ var box = PUBNUB.$('box');
 var nick = PUBNUB.$('nick');
 var roster = PUBNUB.$('roster');
 var message = PUBNUB.$('message');
+var etopic = PUBNUB.$('topic');
 var channel = 'bad-attitude';
+var ROOM = 'ROOM';
 var untz = false;
 
 function clean(text) {
@@ -425,12 +427,6 @@ var commands = {
     return 0;
   },
 
-  topic: function(obj) {
-    var t = obj.message.substring(6).trim();
-    localStorage.topic = t;
-    document.getElementById('topic').innerHTML = t;
-  },
-
   // Add "untz" to everyone's messages.
   untz : function(obj) {
     var command = obj.message.replace(/^\/untz[ ]+/, "");
@@ -460,6 +456,12 @@ var localCommands = {
       cmds.join('<br/>&nbsp;&nbsp;/');
     box.scrollTop = box.scrollHeight - 10;
   },
+
+  // Change the topic.
+  topic: function(obj) {
+    var t = clean(obj.message.substring(6).trim());
+    PUBNUB.state({uuid:ROOM, channel:channel, state:{topic:t}});
+  },
 };
 
 // Sync in from localStorage
@@ -470,9 +472,6 @@ if (localStorage.nick && localStorage.nick.length > 0) {
 if (localStorage.history && localStorage.history.length > 0) {
   box.innerHTML = localStorage.history;
   box.scrollTop = box.scrollHeight - 10;
-}
-if (localStorage.topic && localStorage.topic.length > 0) {
-  document.getElementById('topic').innerHTML = localStorage.topic;
 }
 
 function setRosterNick(uuid, nick) {
@@ -499,6 +498,7 @@ PUBNUB.subscribe({
   channel: channel,
   ssl: true,
   presence: function(p) {
+    console.log('PRESENCE', p);
     switch (p.action) {
     case 'join':
       PUBNUB.state({channel:channel, uuid:p.uuid, callback: function(m){
@@ -506,7 +506,11 @@ PUBNUB.subscribe({
       }});
       break;
     case 'state-change':
-      setRosterNick(p.uuid, p.data.nick);
+      if (p.uuid === ROOM) {
+        etopic.innerHTML = p.data.topic;
+      } else {
+        setRosterNick(p.uuid, p.data.nick);
+      }
       break;
     case 'leave':
     case 'timeout':
@@ -557,6 +561,10 @@ PUBNUB.subscribe({
     });
   }
 });
+
+PUBNUB.state({uuid:ROOM, channel:channel, callback: function(m){
+  etopic.innerHTML = m.topic;
+}});
 
 // When the window unloads, exit the room
 window.onunload = function() {
