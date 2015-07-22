@@ -206,7 +206,7 @@ function decrypt(base64) {
 var commandHistory = {
   limit:  50,
   buffer: [],
-  index: 0,
+  index: -1,
   store: function(line) {
     this.buffer.unshift(line)
     if (this.buffer.length > this.limit) {
