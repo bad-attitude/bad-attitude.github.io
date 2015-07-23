@@ -535,6 +535,8 @@ var localCommands = {
   clear: function() {
     localStorage.history = "";
     box.innerHTML = "";
+    localStorage.roster = "";
+    roster.innerHTML = "";
   },
   help: function() {
     var cmds = Object.keys(localCommands).concat(Object.keys(commands));
@@ -618,63 +620,30 @@ if (localStorage.history && localStorage.history.length > 0) {
   box.innerHTML = localStorage.history;
   box.scrollTop = box.scrollHeight - 10;
 }
+if (localStorage.roster && localStorage.roster.length > 0) {
+  addRosterNick();
+}
 
-function setRosterNick(uuid, knick) {
-  if (!uuid) {return;}
-    var div = PUBNUB.$('uuid-' + uuid);
-    if (knick) {
-      decrypt(knick).then(function(nick) {
-        if (div) {
-          div.innerHTML = clean(nick);
-        } else {
-          roster.insertAdjacentHTML('beforeend',
-            '<div id="uuid-' + uuid + '">' + clean(nick) + '</div>');
-        }
-
-        var children = Array.prototype.map.call(roster.childNodes, function(c) { return [c.id, c.innerHTML]; });
-        children.sort(function(a,b) {
-          if (a[1] < b[1]) { return -1; }
-          if (a[1] > b[1]) { return 1; }
-          return 0;
-        });
-        children.forEach(function(c) { roster.appendChild(PUBNUB.$(c[0])); });
-      })
-      .catch(function(error) {
-        console.log("knick receive/decrypt error", error);
-      });
-    }
-    else {
-      if (div) {
-        div.remove();
-      }
-    }
+function addRosterNick(nick) {
+  // because local variables are for the weak.
+  var items = localStorage.roster && JSON.parse(localStorage.roster) || {};
+  if (nick) {
+    console.log('add "' + nick + '" to roster');
+    items[nick] = unescape(nick);
+    localStorage.roster = JSON.stringify(items);
+  }
+  
+  items = Object.keys(items).
+          sort().
+          map(function(nick) {
+            return '<div>' + nick + '</div>';
+          }).join('');
+  roster.innerHTML = items;
 }
 
 PUBNUB.subscribe({
   channel: channel,
   ssl: true,
-  presence: function(p) {
-    console.log('PRESENCE', p);
-    switch (p.action) {
-    case 'join':
-      PUBNUB.state({channel:channel, uuid:p.uuid, callback: function(m){
-        setRosterNick(p.uuid, m.knick);
-      }});
-      break;
-    case 'state-change':
-      if (p.uuid === ROOM) {
-        etopic.innerHTML = p.data.topic;
-        cons = p.data.cons;
-      } else {
-        setRosterNick(p.uuid, p.data.knick);
-      }
-      break;
-    case 'leave':
-    case 'timeout':
-      setRosterNick(p.uuid);
-      break;
-    }
-  },
   connect: function() {
     if (localStorage.nick) {
       sendPresence();
@@ -714,6 +683,7 @@ PUBNUB.subscribe({
       }
 
       console.log('display: ' + display);
+      addRosterNick(obj.nick);
       boxate(display);
     })
     .catch(function(error) {
