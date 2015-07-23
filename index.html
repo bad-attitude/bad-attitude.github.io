@@ -75,7 +75,7 @@ input {
 <script>
 // Redirect to HTTPS if we need to
 (function() {
-  if (window.location.href.match("http:")) {
+  if (!window.location.hostname.match(/^localhost/) && window.location.href.match("http:")) {
     window.location.href = window.location.href.replace("http:", "https:");
   }
 })();
