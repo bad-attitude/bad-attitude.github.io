@@ -139,8 +139,20 @@ function probable_picture(url) {
 }
 
 function clean(text) {
-  var i = 0, m;
   text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text;
+}
+
+function enhance(text) {
+  var i = 0, m;
+
+  text = clean(text);
+
+  if (untz) {
+    var res = [];
+    text = text.split(" ").join(" untz ");
+  }
+
   while((m = /\b(https?:\/\/\S+)/.exec(text.substring(i)))) {
     var ins;
 
@@ -301,13 +313,7 @@ var spybot = {
 };
 
 function defaultDisplay(obj) {
-  var msg = obj.message;
-  if (untz) {
-    var res = [];
-    msg = msg.split(" ").join(" untz ");
-  }
-
-  var txt = '<span class="nick">' + obj.nick + '</span>: ' + msg;
+  var txt = '<span class="nick">' + obj.nick + '</span>: ' + obj.message;
 
   if (obj.needsNotify) {
     notify(msg);
@@ -590,7 +596,7 @@ var localCommands = {
 
   // Change the topic.
   topic: function(obj) {
-    var t = clean(obj.message.substring(6).trim());
+    var t = enhance(obj.message.substring(6).trim());
     PUBNUB.state({uuid:ROOM, channel:channel, state:{
       topic: t,
       cons: cons,
@@ -716,7 +722,7 @@ PUBNUB.subscribe({
       console.log("received (decrypted): " + plaintext);
       var obj = JSON.parse(plaintext);
       obj.nick = clean(obj.nick);
-      obj.message = clean(obj.message);
+      obj.message = enhance(obj.message);
 
       // If there's a command, let it produce the message
       var display = null;
