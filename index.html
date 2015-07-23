@@ -145,7 +145,7 @@ function clean(text) {
     var ins;
 
     if (probable_picture(m[1])) {
-      ins = '<img class="embedded" src="' + encodeURI(m[1]) + '">';
+      ins = '<a href="' + encodeURI(m[1]) + '"><img class="embedded" src="' + encodeURI(m[1]) + '"></a>';
     } else {
       ins = '<a href="' + encodeURI(m[1]) + '">' + m[1] + '</a>';
     }
