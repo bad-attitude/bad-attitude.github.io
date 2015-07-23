@@ -545,6 +545,28 @@ var commands = {
     return "<i>untz <b>" + (untz ? "on" : "off") + "</b></i>";
   },
 
+  color: function(obj) {
+    var color = obj.message.match(/^(?:\S+)\s+(\S+)/);
+    if (color) {
+       document.body.style.backgroundColor = color[1];
+    }
+    return 0;
+  },
+
+  blink: function(obj) {
+    var command = obj.message.split(' ', 2)[1];
+    switch (command) {
+      case "start": blink.start(); break;
+      case "stop": blink.stop(); break;
+      default: blink.start(); break;
+    }
+  },
+
+  fullscreen: function(obj) {
+    requestFullScreen = true;
+    return "";
+  },
+
   spy: function(obj) {
     spybot.mission("ACTIVATE");
   }
@@ -573,28 +595,6 @@ var localCommands = {
       topic: t,
       cons: cons,
     }});
-  },
-
-  color: function(obj) {
-    var color = obj.message.match(/^(?:\S+)\s+(\S+)/);
-    if (color) {
-       document.body.style.backgroundColor = color[1];
-    }
-    return 0;
-  },
-
-  blink: function(obj) {
-    var command = obj.message.split(' ', 2)[1];
-    switch (command) {
-      case "start": blink.start(); break;
-      case "stop": blink.stop(); break;
-      default: blink.start(); break;
-    }
-  },
-
-  fullscreen: function(obj) {
-    requestFullScreen = true;
-    return "";
   },
 
   // emoticons
